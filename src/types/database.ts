@@ -39,6 +39,7 @@ export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
 export type OrderStatus = 'pending' | 'accepted' | 'preparing' | 'ready' | 'dispatched' | 'delivered' | 'cancelled' | 'rejected';
 export type PaymentMethodType = 'iban_transfer' | 'credit_card' | 'crypto' | 'wallet';
+export type ProfileUpdate = Partial<Omit<Profile, 'id' | 'created_at'>>;
 
 export interface Profile {
   id: string;
@@ -132,3 +133,4 @@ export interface PaymentMethod {
   created_at: string;
   updated_at: string;
 }
+
