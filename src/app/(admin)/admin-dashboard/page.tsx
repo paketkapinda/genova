@@ -1,4 +1,4 @@
-'use client'; // ✅ BU SATIRI EKLEYİN
+'use client';
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -9,6 +9,13 @@ interface AdminStats {
   pending_verifications: number;
   open_disputes: number;
   total_revenue: number;
+}
+
+interface Payment {
+  id: string;
+  amount: number; // ✅ amount property'sini ekleyin
+  status: string;
+  // diğer property'ler...
 }
 
 export default function AdminDashboard() {
@@ -42,13 +49,15 @@ export default function AdminDashboard() {
       .select('*', { count: 'exact', head: true })
       .eq('status', 'open');
 
-    // Calculate total revenue (simplified)
+    // Calculate total revenue
     const { data: payments } = await supabase
       .from('payments')
       .select('amount')
       .eq('status', 'completed');
 
-    const totalRevenue = payments?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
+    // Type assertion veya safe access
+    const paymentData = payments as Payment[] | null;
+    const totalRevenue = paymentData?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
 
     setStats({
       total_users: totalUsers || 0,
