@@ -36,14 +36,14 @@ export default function AdminUsers() {
   const updateUserType = async (userId: string, userType: string) => {
     const { error } = await supabase
       .from('profiles')
-      .update({ user_type: userType })
+      .update({ user_type: userType } as any) // ✅ Type assertion ekleyin
       .eq('id', userId);
 
     if (!error) {
-      fetchUsers(); // Refresh
+      fetchUsers(); // Refresh the list
     }
   };
-
+  
   if (loading) {
     return (
       <div className="container mx-auto p-6">
