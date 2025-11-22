@@ -5,52 +5,44 @@ import '../globals.css'; // ✅ Doğru - bir üst klasörde
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import Link from 'next/link';
+import { Profile } from '@/types/database';
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [user, setUser] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAdmin();
+    checkAdminAccess();
   }, []);
 
-  const checkAdmin = async () => {
+  const checkAdminAccess = async () => {
     const { data: { user } } = await supabase.auth.getUser();
+    
     if (!user) {
       router.push('/auth/login');
       return;
     }
 
-    setUser(user);
+    // Profile type'ını belirt
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single() as { data: Profile | null };
 
-    // Check if user is admin
-  const { data: profile } = await supabase
-  .from('profiles')
-  .select('*')
-  .eq('id', user.id)
-  .single();
+    if (!profile || profile.user_type !== 'admin') {
+      router.push('/');
+      return;
+    }
 
-// Type assertion kullan
-if (!profile || (profile as Profile).user_type !== 'admin') {
-  router.push('/');
-  return;
-}
-
-    setIsAdmin(true);
+    setLoading(false);
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-  };
-
-  if (!user || !isAdmin) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
@@ -59,42 +51,46 @@ if (!profile || (profile as Profile).user_type !== 'admin') {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-8">
-              <Link href="/admin" className="text-xl font-bold">
-                Admin Panel
-              </Link>
-              <div className="hidden md:flex space-x-6">
-                <Link href="/admin" className="hover:text-blue-600">
-                  Dashboard
-                </Link>
-                <Link href="/admin/users" className="hover:text-blue-600">
-                  Users
-                </Link>
-                <Link href="/admin/businesses" className="hover:text-blue-600">
-                  Businesses
-                </Link>
-                <Link href="/admin/disputes" className="hover:text-blue-600">
-                  Disputes
-                </Link>
-                <Link href="/admin/analytics" className="hover:text-blue-600">
-                  Analytics
-                </Link>
+    <div className="min-h-screen bg-gray-100">
+      <nav className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex">
+              <div className="flex-shrink-0 flex items-center">
+                <h1 className="text-xl font-bold">Admin Panel</h1>
               </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                {user.email} (Admin)
-              </span>
-              <button
-                onClick={handleSignOut}
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-              >
-                Sign Out
-              </button>
+              <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+                <a
+                  href="/admin-dashboard"
+                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                >
+                  Dashboard
+                </a>
+                <a
+                  href="/admin/users"
+                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                >
+                  Users
+                </a>
+                <a
+                  href="/admin/businesses"
+                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                >
+                  Businesses
+                </a>
+                <a
+                  href="/admin/disputes"
+                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                >
+                  Disputes
+                </a>
+                <a
+                  href="/admin/analytics"
+                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                >
+                  Analytics
+                </a>
+              </div>
             </div>
           </div>
         </div>
