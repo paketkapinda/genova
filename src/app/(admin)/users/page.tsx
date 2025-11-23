@@ -38,8 +38,9 @@ export default function UsersPage() {
     // Tür problemi olmayan basit çözüm
     const { error } = await supabase
       .from('profiles')
-      .update({ user_type: userType })
+      .update({ user_type: userType } as any)
       .eq('id', userId);
+
 
     if (!error) {
       fetchUsers();
