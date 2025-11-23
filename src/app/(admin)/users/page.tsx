@@ -25,8 +25,9 @@ export default function UsersPage() {
   };
 
   const updateUserType = async (userId: string, userType: string) => {
+    // Türü doğru şekilde belirtin
     const updateData: ProfileUpdate = {
-      user_type: userType as any // UserType'a cast ediyoruz
+      user_type: userType as 'customer' | 'business_owner' | 'admin'
     };
 
     const { error } = await supabase
@@ -35,7 +36,9 @@ export default function UsersPage() {
       .eq('id', userId);
 
     if (!error) {
-      fetchUsers();
+      fetchUsers(); // Kullanıcı listesini yenile
+    } else {
+      console.error('Update error:', error);
     }
   };
 
