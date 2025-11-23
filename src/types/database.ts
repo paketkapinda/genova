@@ -9,8 +9,8 @@ export interface Database {
       };
       businesses: {
         Row: Business;
-        Insert: Omit<Business, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Business, 'id' | 'created_at'>>;
+        Insert: Partial<Business>;
+        Update: Partial<Business>;
       };
       hotel_bookings: {
         Row: HotelBooking;
@@ -133,6 +133,7 @@ export interface PaymentMethod {
   created_at: string;
   updated_at: string;
 }
+
 
 
 
