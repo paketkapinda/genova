@@ -122,3 +122,6 @@ if (document.getElementById('chat-messages')) {
   initAIChat();
 }
 
+
+
+

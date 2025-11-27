@@ -85,3 +85,4 @@
 - New columns have defaults or are nullable
 - RLS policies are additive (existing access preserved)
 
+

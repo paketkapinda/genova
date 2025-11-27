@@ -236,3 +236,4 @@ Update `frontend/assets/js/supabaseClient.js` with your Supabase URL and anon ke
 - **Edge Functions**: 60s timeout (Supabase limit)
 - **Storage**: 50MB per file (Supabase limit)
 
+

@@ -37,6 +37,28 @@ export async function callFunction(name, payload = {}) {
   return data;
 }
 
+// REST-like API wrapper for compatibility with existing code
+export const api = {
+  async post(path, payload = {}) {
+    // Extract function name from path like '/functions/v1/ai-seo' -> 'ai-seo'
+    const match = path.match(/\/([^/]+)$/);
+    if (match) {
+      const functionName = match[1];
+      return callFunction(functionName, payload);
+    }
+    throw new Error(`Invalid API path: ${path}`);
+  },
+  async get(path, params = {}) {
+    // For GET requests, include params in payload
+    const match = path.match(/\/([^/]+)$/);
+    if (match) {
+      const functionName = match[1];
+      return callFunction(functionName, params);
+    }
+    throw new Error(`Invalid API path: ${path}`);
+  }
+};
+
 async function mockCall(name, payload) {
   // Lightweight mocks so frontend can be demoed without backend.
   switch (name) {

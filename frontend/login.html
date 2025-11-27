@@ -87,15 +87,16 @@
         <div class="mt-8 text-center">
           <p class="text-sm text-gray-600">
             Don't have an account? 
-            <a href="/public/index.html" class="text-blue-600 hover:text-blue-700 font-medium">Get Started</a>
+            <a href="/" class="text-blue-600 hover:text-blue-700 font-medium">Get Started</a>
           </p>
         </div>
       </div>
     </main>
 
+    <script src="/frontend/env.js"></script>
     <script type="module">
-      import { supabase } from './assets/js/supabaseClient.js';
-      import { setMode } from './assets/js/api.js';
+      import { supabase } from '/frontend/assets/js/supabaseClient.js';
+      import { setMode } from '/frontend/assets/js/api.js';
 
       const form = document.querySelector('#email-login-form');
       const msgEl = document.querySelector('#login-message');

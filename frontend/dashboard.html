@@ -108,10 +108,11 @@
       </main>
     </div>
 
+    <script src="/frontend/env.js"></script>
     <script type="module">
-      import { requireLogin, signOut, loadShopsIntoSelect } from './assets/js/auth.js';
-      import { callFunction } from './assets/js/api.js';
-      import { supabase } from './assets/js/supabaseClient.js';
+      import { requireLogin, signOut, loadShopsIntoSelect } from '/frontend/assets/js/auth.js';
+      import { callFunction } from '/frontend/assets/js/api.js';
+      import { supabase } from '/frontend/assets/js/supabaseClient.js';
 
       await requireLogin();
 
