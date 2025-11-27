@@ -10,24 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/assets/css/styles.css" />
-
-    <style>
-      /* Additional inline styles for better control */
-      .feature-icon svg {
-        width: 24px;
-        height: 24px;
-      }
-      
-      .auth-logo svg {
-        width: 32px;
-        height: 32px;
-      }
-    </style>
   </head>
   
   <body class="auth-container">
@@ -37,7 +21,7 @@
         <div class="bg-gradient-to-br from-orange-500 to-red-600 rounded-3xl text-white p-8 lg:p-12 shadow-2xl">
           <div class="flex items-center gap-3 mb-8">
             <div class="h-12 w-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-              <svg class="auth-logo" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
               </svg>
             </div>
@@ -53,7 +37,7 @@
           <div class="space-y-4">
             <div class="feature-card">
               <div class="feature-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                 </svg>
               </div>
@@ -65,7 +49,7 @@
             
             <div class="feature-card">
               <div class="feature-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
               </div>
@@ -77,7 +61,7 @@
             
             <div class="feature-card">
               <div class="feature-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                 </svg>
               </div>
@@ -96,7 +80,7 @@
           <!-- Logo -->
           <div class="text-center mb-8">
             <div class="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 mb-4 shadow-lg">
-              <svg class="auth-logo" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
               </svg>
             </div>
@@ -105,148 +89,153 @@
           </div>
 
           <!-- Tab Navigation -->
-          <div class="tab-nav">
-            <button id="tab-login" class="tab-button active">Sign In</button>
-            <button id="tab-signup" class="tab-button">Sign Up</button>
+          <div class="tab-container">
+            <div class="tab-buttons">
+              <button class="tab-button active" data-tab="login">Sign In</button>
+              <button class="tab-button" data-tab="signup">Sign Up</button>
+            </div>
           </div>
 
           <!-- Login Form -->
-          <form id="login-form" class="space-y-6">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-3" for="login-email">Email Address</label>
-              <input
-                id="login-email"
-                name="email"
-                type="email"
-                required
-                placeholder="Enter your email"
-                class="input-field"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-3" for="login-password">Password</label>
-              <input
-                id="login-password"
-                name="password"
-                type="password"
-                required
-                minlength="6"
-                placeholder="Enter your password"
-                class="input-field"
-              />
-            </div>
-            <button
-              type="submit"
-              class="w-full btn-primary py-4 text-base font-semibold"
-            >
-              Sign In
-            </button>
-          </form>
+          <div class="tab-content active" id="login-tab">
+            <form id="login-form" class="space-y-6">
+              <div class="form-group">
+                <label class="form-label" for="login-email">Email Address</label>
+                <input
+                  id="login-email"
+                  name="email"
+                  type="email"
+                  required
+                  placeholder="Enter your email"
+                  class="form-input"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="login-password">Password</label>
+                <input
+                  id="login-password"
+                  name="password"
+                  type="password"
+                  required
+                  minlength="6"
+                  placeholder="Enter your password"
+                  class="form-input"
+                />
+              </div>
+              <button
+                type="submit"
+                class="btn btn-primary w-full py-3"
+              >
+                Sign In
+              </button>
+            </form>
 
-          <!-- Sign Up Form -->
-          <form id="signup-form" class="space-y-6 hidden">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-3" for="signup-fullname">Full Name</label>
-              <input
-                id="signup-fullname"
-                name="fullname"
-                type="text"
-                required
-                placeholder="Enter your full name"
-                class="input-field"
-              />
+            <div class="forgot-password">
+              <a href="#" id="forgot-password-link">Forgot your password?</a>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-3" for="signup-email">Email Address</label>
-              <input
-                id="signup-email"
-                name="email"
-                type="email"
-                required
-                placeholder="Enter your email"
-                class="input-field"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-3" for="signup-password">Password</label>
-              <input
-                id="signup-password"
-                name="password"
-                type="password"
-                required
-                minlength="6"
-                placeholder="Create a password"
-                class="input-field"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-3" for="signup-confirm-password">Confirm Password</label>
-              <input
-                id="signup-confirm-password"
-                name="confirmPassword"
-                type="password"
-                required
-                minlength="6"
-                placeholder="Confirm your password"
-                class="input-field"
-              />
-            </div>
-            <button
-              type="submit"
-              class="w-full btn-primary py-4 text-base font-semibold"
-            >
-              Create Account
-            </button>
-          </form>
 
-          <!-- Forgot Password Link -->
-          <div class="mt-6 text-center">
-            <button
-              id="forgot-password-btn"
-              class="text-orange-600 hover:text-orange-700 font-medium text-base transition-colors duration-300"
-            >
-              Forgot your password?
-            </button>
+            <div class="auth-switch">
+              <p>Don't have an account? <a href="#" id="switch-to-signup">Sign up</a></p>
+            </div>
           </div>
 
-          <p id="login-message" class="mt-6 text-sm text-center"></p>
+          <!-- Sign Up Form -->
+          <div class="tab-content" id="signup-tab">
+            <form id="signup-form" class="space-y-6">
+              <div class="form-group">
+                <label class="form-label" for="signup-fullname">Full Name</label>
+                <input
+                  id="signup-fullname"
+                  name="fullname"
+                  type="text"
+                  required
+                  placeholder="Enter your full name"
+                  class="form-input"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="signup-email">Email Address</label>
+                <input
+                  id="signup-email"
+                  name="email"
+                  type="email"
+                  required
+                  placeholder="Enter your email"
+                  class="form-input"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="signup-password">Password</label>
+                <input
+                  id="signup-password"
+                  name="password"
+                  type="password"
+                  required
+                  minlength="6"
+                  placeholder="Create a password"
+                  class="form-input"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="signup-confirm-password">Confirm Password</label>
+                <input
+                  id="signup-confirm-password"
+                  name="confirmPassword"
+                  type="password"
+                  required
+                  minlength="6"
+                  placeholder="Confirm your password"
+                  class="form-input"
+                />
+              </div>
+              <button
+                type="submit"
+                class="btn btn-primary w-full py-3"
+              >
+                Create Account
+              </button>
+            </form>
+
+            <div class="auth-switch">
+              <p>Already have an account? <a href="#" id="switch-to-login">Sign in</a></p>
+            </div>
+          </div>
+
+          <!-- Message Container -->
+          <div id="message-container"></div>
         </div>
       </div>
     </div>
 
     <!-- Forgot Password Modal -->
-    <div id="forgot-password-modal" class="modal-overlay hidden">
-      <div class="modal-content max-w-md">
-        <div class="mb-6 flex items-center justify-between">
-          <h2 class="text-2xl font-bold text-gray-900">Reset Password</h2>
-          <button id="modal-close" class="text-gray-400 hover:text-gray-600 transition-colors">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+    <div class="modal" id="forgot-password-modal">
+      <div class="modal-content">
+        <button class="modal-close" id="modal-close">&times;</button>
+        <div class="modal-header">
+          <h2>Reset Password</h2>
         </div>
         
         <form id="forgot-password-form" class="space-y-6">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-3" for="forgot-email">Email Address</label>
+          <div class="form-group">
+            <label class="form-label" for="forgot-email">Email Address</label>
             <input
               id="forgot-email"
               name="email"
               type="email"
               required
               placeholder="Enter your email"
-              class="input-field"
+              class="form-input"
             />
           </div>
           <button
             type="submit"
-            class="w-full btn-primary py-4 text-base font-semibold"
+            class="btn btn-primary w-full py-3"
           >
             Send Reset Link
           </button>
         </form>
         
-        <p id="forgot-message" class="mt-6 text-sm text-center"></p>
+        <div id="forgot-message-container"></div>
       </div>
     </div>
 
@@ -255,96 +244,115 @@
       import { supabase } from '/assets/js/supabaseClient.js';
 
       // Tab Management
-      const tabs = {
-        login: document.querySelector('#tab-login'),
-        signup: document.querySelector('#tab-signup')
-      };
+      const tabButtons = document.querySelectorAll('.tab-button');
+      const tabContents = document.querySelectorAll('.tab-content');
+      const switchToSignup = document.querySelector('#switch-to-signup');
+      const switchToLogin = document.querySelector('#switch-to-login');
 
-      const forms = {
-        login: document.querySelector('#login-form'),
-        signup: document.querySelector('#signup-form')
-      };
-
-      function activateTab(activeTab) {
-        console.log('Activating tab:', activeTab);
-        
-        // Reset all tabs
-        Object.values(tabs).forEach(tab => {
-          tab.classList.remove('active');
+      function switchTab(tabName) {
+        // Update tab buttons
+        tabButtons.forEach(button => {
+          button.classList.toggle('active', button.dataset.tab === tabName);
         });
         
-        // Hide all forms
-        Object.values(forms).forEach(form => {
-          form.classList.add('hidden');
+        // Update tab contents
+        tabContents.forEach(content => {
+          content.classList.toggle('active', content.id === `${tabName}-tab`);
         });
-        
-        // Activate selected tab
-        tabs[activeTab].classList.add('active');
-        forms[activeTab].classList.remove('hidden');
       }
 
-      // Tab event listeners
-      tabs.login.addEventListener('click', () => activateTab('login'));
-      tabs.signup.addEventListener('click', () => activateTab('signup'));
+      tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          switchTab(button.dataset.tab);
+        });
+      });
 
-      // Forgot Password Modal
-      const forgotPasswordBtn = document.querySelector('#forgot-password-btn');
+      switchToSignup.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchTab('signup');
+      });
+
+      switchToLogin.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchTab('login');
+      });
+
+      // Modal Management
+      const forgotPasswordLink = document.querySelector('#forgot-password-link');
       const forgotPasswordModal = document.querySelector('#forgot-password-modal');
       const modalClose = document.querySelector('#modal-close');
-      const forgotPasswordForm = document.querySelector('#forgot-password-form');
 
-      forgotPasswordBtn.addEventListener('click', () => {
-        forgotPasswordModal.classList.remove('hidden');
-        forgotPasswordModal.classList.add('flex');
+      forgotPasswordLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        forgotPasswordModal.classList.add('active');
       });
 
       modalClose.addEventListener('click', () => {
-        forgotPasswordModal.classList.add('hidden');
-        forgotPasswordModal.classList.remove('flex');
+        forgotPasswordModal.classList.remove('active');
       });
 
       // Close modal when clicking outside
       forgotPasswordModal.addEventListener('click', (e) => {
         if (e.target === forgotPasswordModal) {
-          forgotPasswordModal.classList.add('hidden');
-          forgotPasswordModal.classList.remove('flex');
+          forgotPasswordModal.classList.remove('active');
         }
       });
 
+      // Message display function
+      function showMessage(message, type = 'info') {
+        const container = document.querySelector('#message-container');
+        container.innerHTML = `<div class="message ${type}">${message}</div>`;
+        
+        // Auto-hide success messages after 5 seconds
+        if (type === 'success') {
+          setTimeout(() => {
+            container.innerHTML = '';
+          }, 5000);
+        }
+      }
+
+      function showForgotMessage(message, type = 'info') {
+        const container = document.querySelector('#forgot-message-container');
+        container.innerHTML = `<div class="message ${type}">${message}</div>`;
+        
+        if (type === 'success') {
+          setTimeout(() => {
+            container.innerHTML = '';
+            forgotPasswordModal.classList.remove('active');
+          }, 3000);
+        }
+      }
+
       // Login Form
-      forms.login.addEventListener('submit', async (e) => {
+      const loginForm = document.querySelector('#login-form');
+      loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const msgEl = document.querySelector('#login-message');
-        msgEl.textContent = '';
-        msgEl.className = 'mt-6 text-sm text-center';
         
-        const email = forms.login.querySelector('#login-email').value;
-        const password = forms.login.querySelector('#login-password').value;
+        const email = document.querySelector('#login-email').value.trim();
+        const password = document.querySelector('#login-password').value;
         
-        const submitBtn = forms.login.querySelector('button[type="submit"]');
+        const submitBtn = loginForm.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
+        
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<div class="loading-spinner mx-auto"></div>';
+        submitBtn.textContent = 'Signing in...';
         
         try {
           const { data, error } = await supabase.auth.signInWithPassword({ 
-            email: email.trim(), 
-            password: password 
+            email, 
+            password 
           });
           
           if (error) {
-            msgEl.textContent = error.message;
-            msgEl.className = 'mt-6 text-sm text-center text-red-600';
+            showMessage(error.message, 'error');
           } else {
-            msgEl.textContent = 'Success! Redirecting to dashboard...';
-            msgEl.className = 'mt-6 text-sm text-center text-green-600';
+            showMessage('Success! Redirecting to dashboard...', 'success');
             setTimeout(() => {
               window.location.href = '/dashboard.html';
             }, 1000);
           }
         } catch (error) {
-          msgEl.textContent = 'An error occurred. Please try again.';
-          msgEl.className = 'mt-6 text-sm text-center text-red-600';
+          showMessage('An error occurred. Please try again.', 'error');
         } finally {
           submitBtn.disabled = false;
           submitBtn.textContent = originalText;
@@ -352,51 +360,49 @@
       });
 
       // Sign Up Form
-      forms.signup.addEventListener('submit', async (e) => {
+      const signupForm = document.querySelector('#signup-form');
+      signupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const msgEl = document.querySelector('#login-message');
-        msgEl.textContent = '';
-        msgEl.className = 'mt-6 text-sm text-center';
         
-        const fullName = forms.signup.querySelector('#signup-fullname').value;
-        const email = forms.signup.querySelector('#signup-email').value;
-        const password = forms.signup.querySelector('#signup-password').value;
-        const confirmPassword = forms.signup.querySelector('#signup-confirm-password').value;
+        const fullName = document.querySelector('#signup-fullname').value.trim();
+        const email = document.querySelector('#signup-email').value.trim();
+        const password = document.querySelector('#signup-password').value;
+        const confirmPassword = document.querySelector('#signup-confirm-password').value;
         
         if (password !== confirmPassword) {
-          msgEl.textContent = 'Passwords do not match';
-          msgEl.className = 'mt-6 text-sm text-center text-red-600';
+          showMessage('Passwords do not match', 'error');
           return;
         }
         
-        const submitBtn = forms.signup.querySelector('button[type="submit"]');
+        const submitBtn = signupForm.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
+        
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<div class="loading-spinner mx-auto"></div>';
+        submitBtn.textContent = 'Creating Account...';
         
         try {
           const { data, error } = await supabase.auth.signUp({ 
-            email: email.trim(), 
-            password: password,
+            email, 
+            password,
             options: {
               data: {
-                full_name: fullName.trim()
+                full_name: fullName
               }
             }
           });
           
           if (error) {
-            msgEl.textContent = error.message;
-            msgEl.className = 'mt-6 text-sm text-center text-red-600';
+            showMessage(error.message, 'error');
           } else {
-            msgEl.textContent = 'Account created successfully! Please check your email for verification.';
-            msgEl.className = 'mt-6 text-sm text-center text-green-600';
-            // Clear form
-            forms.signup.reset();
+            showMessage('Account created successfully! Please check your email for verification.', 'success');
+            signupForm.reset();
+            // Switch to login tab after successful signup
+            setTimeout(() => {
+              switchTab('login');
+            }, 3000);
           }
         } catch (error) {
-          msgEl.textContent = 'An error occurred. Please try again.';
-          msgEl.className = 'mt-6 text-sm text-center text-red-600';
+          showMessage('An error occurred. Please try again.', 'error');
         } finally {
           submitBtn.disabled = false;
           submitBtn.textContent = originalText;
@@ -404,45 +410,37 @@
       });
 
       // Forgot Password Form
+      const forgotPasswordForm = document.querySelector('#forgot-password-form');
       forgotPasswordForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const msgEl = document.querySelector('#forgot-message');
-        msgEl.textContent = '';
-        msgEl.className = 'mt-6 text-sm text-center';
         
-        const email = forgotPasswordForm.querySelector('#forgot-email').value;
+        const email = document.querySelector('#forgot-email').value.trim();
         
         const submitBtn = forgotPasswordForm.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
+        
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<div class="loading-spinner mx-auto"></div>';
+        submitBtn.textContent = 'Sending...';
         
         try {
-          const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+          const { error } = await supabase.auth.resetPasswordForEmail(email);
           
           if (error) {
-            msgEl.textContent = error.message;
-            msgEl.className = 'mt-6 text-sm text-center text-red-600';
+            showForgotMessage(error.message, 'error');
           } else {
-            msgEl.textContent = 'Password reset link sent! Please check your email.';
-            msgEl.className = 'mt-6 text-sm text-center text-green-600';
-            setTimeout(() => {
-              forgotPasswordModal.classList.add('hidden');
-              forgotPasswordModal.classList.remove('flex');
-              forgotPasswordForm.reset();
-            }, 2000);
+            showForgotMessage('Password reset link sent! Please check your email.', 'success');
+            forgotPasswordForm.reset();
           }
         } catch (error) {
-          msgEl.textContent = 'An error occurred. Please try again.';
-          msgEl.className = 'mt-6 text-sm text-center text-red-600';
+          showForgotMessage('An error occurred. Please try again.', 'error');
         } finally {
           submitBtn.disabled = false;
           submitBtn.textContent = originalText;
         }
       });
 
-      // Initialize with login form active
-      activateTab('login');
+      // Initialize with login tab active
+      switchTab('login');
     </script>
   </body>
 </html>
