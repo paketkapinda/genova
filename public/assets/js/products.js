@@ -49,7 +49,7 @@ export async function loadProducts() {
           </div>
           <div class="flex gap-2">
             <button
-              onclick="window.location.href='/frontend/product-detail.html?id=${product.id}'"
+              onclick="window.location.href='/product-detail.html?id=${product.id}'"
               class="flex-1 btn-secondary text-sm py-2"
             >
               View
@@ -176,7 +176,7 @@ export async function loadProductDetail() {
   const params = new URLSearchParams(window.location.search);
   const productId = params.get('id');
   if (!productId) {
-    window.location.href = '/frontend/products.html';
+    window.location.href = '/public/products.html';
     return;
   }
 
