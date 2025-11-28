@@ -193,6 +193,95 @@
       </main>
     </div>
 
+<!-- Product Modal - product-detail.html'in body içine ekle -->
+<div class="modal" id="modal-product">
+  <div class="modal-content" style="max-width: 600px;">
+    <button class="modal-close" id="modal-product-close">&times;</button>
+    <div class="modal-header">
+      <h2 class="modal-title" id="modal-product-title">Edit Product</h2>
+      <p class="modal-subtitle">Update your product information</p>
+    </div>
+    
+    <form id="form-product">
+      <input type="hidden" id="product-id" />
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="product-title">Product Title</label>
+          <input
+            type="text"
+            id="product-title"
+            required
+            placeholder="Enter product title"
+            class="form-input"
+          />
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="product-category">Category</label>
+          <select
+            id="product-category"
+            required
+            class="form-input"
+          >
+            <option value="">Select category</option>
+            <option value="tshirt">T-Shirt</option>
+            <option value="mug">Mug</option>
+            <option value="plate">Plate</option>
+            <option value="phone-case">Phone Case</option>
+            <option value="jewelry">Jewelry</option>
+            <option value="wood">Wood Product</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="product-price">Price (USD)</label>
+          <input
+            type="number"
+            id="product-price"
+            step="0.01"
+            min="0"
+            required
+            placeholder="0.00"
+            class="form-input"
+          />
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="product-status">Status</label>
+          <select
+            id="product-status"
+            class="form-input"
+          >
+            <option value="draft">Draft</option>
+            <option value="published">Published</option>
+            <option value="archived">Archived</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="product-description">Description</label>
+        <textarea
+          id="product-description"
+          rows="4"
+          placeholder="Enter product description..."
+          class="form-input"
+          style="resize: vertical;"
+        ></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-flex">Update Product</button>
+        <button type="button" class="btn btn-outline btn-flex" id="btn-cancel-product">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+    
     <!-- JavaScript Import -->
     <script src="/assets/js/env.js"></script>
     <script type="module" src="/assets/js/supabaseClient.js"></script>
@@ -200,5 +289,9 @@
     <script type="module" src="/assets/js/api.js"></script>
     <script type="module" src="/assets/js/ui.js"></script>
     <script type="module" src="/assets/js/product-detail.js"></script>
+
+
+    
   </body>
 </html>
+
