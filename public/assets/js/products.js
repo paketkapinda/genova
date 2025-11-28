@@ -98,17 +98,19 @@ function renderProducts(products) {
         <span class="product-category">${getCategoryName(product.category)}</span>
         <p class="product-description">${product.description || 'Açıklama yok'}</p>
         <div class="product-actions">
+          <!-- VIEW DETAILS BUTONU EKLENDİ -->
+          <button class="btn btn-outline btn-sm" onclick="viewProductDetails('${product.id}')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+            View Details
+          </button>
           <button class="btn btn-primary btn-sm" onclick="generateMockup('${product.id}')">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
             Mockup
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="editProduct('${product.id}')">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-            </svg>
-            Düzenle
           </button>
           ${product.status !== 'listed' 
             ? `<button class="btn btn-primary btn-sm" onclick="publishProduct('${product.id}')">
@@ -124,6 +126,12 @@ function renderProducts(products) {
     </div>
   `).join('');
 }
+
+// View Details fonksiyonu - products.js'e ekle
+window.viewProductDetails = function(productId) {
+  console.log('🔍 Product details:', productId);
+  window.location.href = `/product-detail.html?id=${productId}`;
+};
 
 function getCategoryName(category) {
   const categories = {
