@@ -4,13 +4,11 @@ import { showNotification } from './ui.js';
 
 let currentOrder = null;
 
-// URL'den order ID'sini al
 function getOrderIdFromURL() {
   const urlParams = new URLSearchParams(window.location.search);
   return urlParams.get('id');
 }
 
-// Hata durumunu göster
 function showErrorState(message) {
   const loadingState = document.getElementById('loading-state');
   const errorState = document.getElementById('error-state');
@@ -23,7 +21,6 @@ function showErrorState(message) {
   }
 }
 
-// Loading state göster
 function showLoadingState() {
   const loadingState = document.getElementById('loading-state');
   const errorState = document.getElementById('error-state');
@@ -34,7 +31,6 @@ function showLoadingState() {
   if (orderContainer) orderContainer.classList.add('hidden');
 }
 
-// Tarihi formatla
 function formatDate(dateString) {
   if (!dateString) return 'N/A';
   const date = new Date(dateString);
@@ -47,7 +43,6 @@ function formatDate(dateString) {
   });
 }
 
-// Order detaylarını göster
 function displayOrderDetail(order) {
   const loadingState = document.getElementById('loading-state');
   const errorState = document.getElementById('error-state');
@@ -55,23 +50,19 @@ function displayOrderDetail(order) {
   
   console.log('📦 Displaying order:', order);
   
-  // Elementleri doldur
   document.getElementById('order-number').textContent = order.order_number || order.id.slice(-8);
   document.getElementById('order-title').textContent = `Order #${order.order_number || order.id.slice(-8)}`;
   
-  // Status badge
   const statusBadge = document.getElementById('order-status');
   if (statusBadge) {
     statusBadge.textContent = getStatusLabel(order.status);
     statusBadge.className = `order-status-badge status-${order.status}`;
   }
   
-  // Customer info
   document.getElementById('customer-name').textContent = order.customer_name || 'Guest Customer';
   document.getElementById('customer-email').textContent = order.customer_email || 'N/A';
   document.getElementById('customer-phone').textContent = order.customer_phone || 'N/A';
   
-  // Shipping address
   const shippingAddress = document.getElementById('shipping-address');
   if (shippingAddress && order.shipping_address) {
     shippingAddress.innerHTML = `
@@ -83,7 +74,6 @@ function displayOrderDetail(order) {
     `;
   }
   
-  // Order details
   document.getElementById('order-total').textContent = `$${order.total_amount ? parseFloat(order.total_amount).toFixed(2) : '0.00'}`;
   document.getElementById('order-items-count').textContent = order.items_count || (order.items ? order.items.length : 1);
   document.getElementById('order-id').textContent = order.id;
@@ -91,7 +81,6 @@ function displayOrderDetail(order) {
   document.getElementById('order-updated').textContent = formatDate(order.updated_at);
   document.getElementById('payment-method').textContent = order.payment_method || 'Credit Card';
   
-  // Order items
   const itemsList = document.getElementById('order-items-list');
   if (itemsList && order.items) {
     itemsList.innerHTML = order.items.map(item => `
@@ -114,16 +103,13 @@ function displayOrderDetail(order) {
     `).join('');
   }
   
-  // Global değişkene kaydet
   currentOrder = order;
   
-  // Durumları güncelle
   if (loadingState) loadingState.classList.add('hidden');
   if (errorState) errorState.classList.add('hidden');
   if (orderContainer) orderContainer.classList.remove('hidden');
 }
 
-// API'den order detaylarını al
 async function getOrderById(orderId) {
   try {
     console.log('🔄 Order detayları yükleniyor:', orderId);
@@ -143,8 +129,6 @@ async function getOrderById(orderId) {
 
     if (error) {
       console.error('❌ Order detay hatası:', error);
-      
-      // Mock data fallback
       if (error.message.includes('recursion') || error.message.includes('policy')) {
         console.warn('⚠️ RLS hatası - Mock data kullanılıyor');
         return getMockOrderById(orderId);
@@ -165,7 +149,6 @@ async function getOrderById(orderId) {
   }
 }
 
-// Mock order data (fallback)
 function getMockOrderById(orderId) {
   const mockOrders = {
     'mock-order-1': {
@@ -210,7 +193,6 @@ function getMockOrderById(orderId) {
   return mockOrders[orderId] || mockOrders['mock-order-1'];
 }
 
-// Status label helper
 function getStatusLabel(status) {
   const statusMap = {
     'pending': 'Pending',
@@ -223,7 +205,6 @@ function getStatusLabel(status) {
   return statusMap[status] || status;
 }
 
-// Order detaylarını yükle
 async function loadOrderDetail() {
   const orderId = getOrderIdFromURL();
   if (!orderId) {
@@ -241,9 +222,7 @@ async function loadOrderDetail() {
   }
 }
 
-// Action butonlarını setup et
 function setupActionButtons() {
-  // Process order butonu
   const processBtn = document.getElementById('btn-process-order');
   if (processBtn) {
     processBtn.addEventListener('click', async function() {
@@ -262,7 +241,6 @@ function setupActionButtons() {
     });
   }
   
-  // Mark as shipped butonu
   const shipBtn = document.getElementById('btn-mark-shipped');
   if (shipBtn) {
     shipBtn.addEventListener('click', async function() {
@@ -281,7 +259,6 @@ function setupActionButtons() {
     });
   }
   
-  // Cancel order butonu
   const cancelBtn = document.getElementById('btn-cancel-order');
   if (cancelBtn) {
     cancelBtn.addEventListener('click', async function() {
@@ -301,7 +278,6 @@ function setupActionButtons() {
   }
 }
 
-// Sayfa yüklendiğinde çalıştır
 document.addEventListener('DOMContentLoaded', function() {
   console.log('🚀 Order Detail yüklendi');
   
