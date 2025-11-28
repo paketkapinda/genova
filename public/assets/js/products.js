@@ -278,118 +278,124 @@ window.publishProduct = async function(productId) {
   }
 };
 
-// Product form handling
+// Product form handling - GÜNCELLENMİŞ
 export function initProductForm() {
   const btnNew = document.getElementById('btn-new-product');
   const btnEmptyNew = document.getElementById('btn-empty-new-product');
   const form = document.getElementById('form-product');
 
+  // Modal event'lerini kur
+  setupModalEvents();
+  
+  // Template selector'ı oluştur
+  createTemplateSelector();
+
   // Yeni ürün butonu
   if (btnNew) {
     btnNew.addEventListener('click', () => {
-      document.getElementById('modal-product-title').textContent = 'Yeni Ürün';
-      document.getElementById('form-product').reset();
-      document.getElementById('product-id').value = '';
-      
-      const productModal = document.getElementById('modal-product');
-      if (productModal) {
-        productModal.classList.add('active');
-      }
+      openProductModal();
     });
   }
 
   // Boş state'deki yeni ürün butonu
   if (btnEmptyNew) {
     btnEmptyNew.addEventListener('click', () => {
-      document.getElementById('modal-product-title').textContent = 'Yeni Ürün';
-      document.getElementById('form-product').reset();
-      document.getElementById('product-id').value = '';
-      
-      const productModal = document.getElementById('modal-product');
-      if (productModal) {
-        productModal.classList.add('active');
-      }
-    });
-  }
-
-  // Modal kapatma
-  setupModalClose('modal-product', 'modal-product-close');
-  setupModalClose('modal-mockup', 'modal-mockup-close');
-
-  // İptal butonları
-  const btnCancelProduct = document.getElementById('btn-cancel-product');
-  if (btnCancelProduct) {
-    btnCancelProduct.addEventListener('click', () => {
-      hideModal('modal-product');
-    });
-  }
-
-  const btnCancelMockup = document.getElementById('btn-cancel-mockup');
-  if (btnCancelMockup) {
-    btnCancelMockup.addEventListener('click', () => {
-      hideModal('modal-mockup');
+      openProductModal();
     });
   }
 
   // Form submission
   if (form) {
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const id = document.getElementById('product-id').value;
-      const title = document.getElementById('product-title').value;
-      const category = document.getElementById('product-category').value;
-      const price = document.getElementById('product-price').value;
-      const status = document.getElementById('product-status').value;
-      const description = document.getElementById('product-description').value;
-
-      if (!title || !category || !price) {
-        showNotification('Lütfen gerekli alanları doldurun', 'error');
-        return;
-      }
-
-      try {
-        const productData = {
-          title,
-          category,
-          price: parseFloat(price),
-          status: status || 'draft',
-          description
-        };
-
-        if (id) {
-          // Ürün güncelleme
-          console.log('🔄 Ürün güncelleniyor:', id);
-          showNotification('Ürün güncelleniyor...', 'info');
-          
-          // Simüle edilmiş güncelleme
-          setTimeout(() => {
-            showNotification('Ürün başarıyla güncellendi!', 'success');
-            hideModal('modal-product');
-            loadProducts();
-          }, 1000);
-          
-        } else {
-          // Yeni ürün oluşturma
-          console.log('🆕 Yeni ürün oluşturuluyor');
-          showNotification('Ürün oluşturuluyor...', 'info');
-          
-          // Simüle edilmiş oluşturma
-          setTimeout(() => {
-            showNotification('Ürün başarıyla oluşturuldu!', 'success');
-            hideModal('modal-product');
-            loadProducts();
-          }, 1000);
-        }
-
-      } catch (error) {
-        console.error('❌ Form hatası:', error);
-        showNotification('İşlem başarısız', 'error');
-      }
-    });
+    form.addEventListener('submit', handleFormSubmit);
   }
 }
 
+// Modal açma fonksiyonu
+function openProductModal() {
+  document.getElementById('modal-product-title').textContent = 'Yeni Ürün';
+  document.getElementById('form-product').reset();
+  document.getElementById('product-id').value = '';
+  
+  // Template'i sıfırla
+  const toggle = document.getElementById('template-toggle');
+  if (toggle) {
+    toggle.checked = false;
+    document.getElementById('template-options').style.display = 'none';
+    document.getElementById('template-clear').style.display = 'none';
+    document.querySelector('.toggle-slider').style.background = '#cbd5e1';
+    document.querySelector('.toggle-knob').style.left = '3px';
+    document.querySelector('.template-toggle span').textContent = 'Örnek Göster';
+  }
+  
+  const productModal = document.getElementById('modal-product');
+  if (productModal) {
+    productModal.classList.add('active');
+  }
+}
+
+// Form submit handler
+async function handleFormSubmit(e) {
+  e.preventDefault();
+  
+  const id = document.getElementById('product-id').value;
+  const title = document.getElementById('product-title').value;
+  const category = document.getElementById('product-category').value;
+  const price = document.getElementById('product-price').value;
+  const status = document.getElementById('product-status').value;
+  const description = document.getElementById('product-description').value;
+
+  if (!title || !category || !price) {
+    showNotification('Lütfen gerekli alanları doldurun', 'error');
+    return;
+  }
+
+  try {
+    const productData = {
+      title,
+      category,
+      price: parseFloat(price),
+      status: status || 'draft',
+      description,
+      user_id: (await supabase.auth.getUser()).data.user?.id
+    };
+
+    if (id) {
+      // Ürün güncelleme
+      console.log('🔄 Ürün güncelleniyor:', id);
+      showNotification('Ürün güncelleniyor...', 'info');
+      
+      const { error } = await supabase
+        .from('products')
+        .update(productData)
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      showNotification('Ürün başarıyla güncellendi!', 'success');
+      hideModal('modal-product');
+      loadProducts();
+      
+    } else {
+      // Yeni ürün oluşturma
+      console.log('🆕 Yeni ürün oluşturuluyor');
+      showNotification('Ürün oluşturuluyor...', 'info');
+      
+      const { error } = await supabase
+        .from('products')
+        .insert([productData]);
+        
+      if (error) throw error;
+      
+      showNotification('Ürün başarıyla oluşturuldu!', 'success');
+      hideModal('modal-product');
+      loadProducts();
+    }
+
+  } catch (error) {
+    console.error('❌ Form hatası:', error);
+    showNotification('İşlem başarısız: ' + error.message, 'error');
+  }
+}
 // Sayfa yüklendiğinde çalıştır
 document.addEventListener('DOMContentLoaded', function() {
   console.log('🚀 Products.js yüklendi');
@@ -405,3 +411,219 @@ if (document.getElementById('products-grid')) {
   loadProducts();
   initProductForm();
 }
+
+//=======================
+
+// Örnek şablon verileri
+const sampleTemplates = {
+  tshirt: {
+    title: "Retro Vintage Tişört Tasarımı",
+    price: 24.99,
+    description: "Retro renkler ve desenlerle hazırlanmış vintage tarzı tişört. %100 pamuk, rahat ve dayanıklı.",
+    category: "tshirt"
+  },
+  mug: {
+    title: "Kahve Severler için Komik Kupa",
+    price: 18.50,
+    description: "Sabah insanı mısınız? Pek sayılmaz. Ama kahve yardımcı olur! Seramik kupa, 325ml kapasite.",
+    category: "mug"
+  },
+  phoneCase: {
+    title: "Minimalist Telefon Kılıfı",
+    price: 22.99,
+    description: "Modern telefon kılıfları için temiz ve minimalist tasarım. Titanyum kaplama, ince profil.",
+    category: "phone-case"
+  },
+  jewelry: {
+    title: "El Yapımı Gümüş Kolye",
+    price: 45.99,
+    description: "Özel tasarım el yapımı gümüş kolye. Doğal taşlar ve özenle işlenmiş detaylar.",
+    category: "jewelry"
+  }
+};
+
+// Örnek şablon UI'sını oluştur
+function createTemplateSelector() {
+  const form = document.getElementById('form-product');
+  if (!form) return;
+  
+  // Template selector'ı formun başına ekle
+  const templateHTML = `
+    <div class="template-selector" style="margin-bottom: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+      <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 12px;">
+        <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #374151;">Örnek Şablonlar</h4>
+        <label class="template-toggle" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="checkbox" id="template-toggle" style="display: none;">
+          <div class="toggle-slider" style="width: 44px; height: 24px; background: #cbd5e1; border-radius: 12px; position: relative; transition: all 0.3s ease;">
+            <div class="toggle-knob" style="width: 18px; height: 18px; background: white; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: all 0.3s ease;"></div>
+          </div>
+          <span style="font-size: 12px; color: #64748b;">Örnek Göster</span>
+        </label>
+      </div>
+      
+      <div id="template-options" style="display: none; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px;">
+        <button type="button" class="template-btn" data-template="tshirt" style="padding: 8px 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
+          👕 Tişört
+        </button>
+        <button type="button" class="template-btn" data-template="mug" style="padding: 8px 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
+          ☕ Kupa
+        </button>
+        <button type="button" class="template-btn" data-template="phoneCase" style="padding: 8px 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
+          📱 Telefon Kılıfı
+        </button>
+        <button type="button" class="template-btn" data-template="jewelry" style="padding: 8px 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
+          💎 Takı
+        </button>
+      </div>
+      
+      <div id="template-clear" style="display: none; margin-top: 12px;">
+        <button type="button" id="clear-template" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
+          Şablonu Temizle
+        </button>
+      </div>
+    </div>
+  `;
+  
+  form.insertAdjacentHTML('afterbegin', templateHTML);
+  setupTemplateEvents();
+}
+
+// Template event'lerini kur
+function setupTemplateEvents() {
+  const toggle = document.getElementById('template-toggle');
+  const templateOptions = document.getElementById('template-options');
+  const templateClear = document.getElementById('template-clear');
+  const toggleSlider = document.querySelector('.toggle-slider');
+  const toggleKnob = document.querySelector('.toggle-knob');
+  
+  if (toggle && templateOptions) {
+    toggle.addEventListener('change', function() {
+      if (this.checked) {
+        templateOptions.style.display = 'grid';
+        templateClear.style.display = 'block';
+        toggleSlider.style.background = '#ea580c';
+        toggleKnob.style.left = '23px';
+        document.querySelector('.template-toggle span').textContent = 'Örnek Gösteriliyor';
+      } else {
+        templateOptions.style.display = 'none';
+        templateClear.style.display = 'none';
+        toggleSlider.style.background = '#cbd5e1';
+        toggleKnob.style.left = '3px';
+        document.querySelector('.template-toggle span').textContent = 'Örnek Göster';
+      }
+    });
+  }
+  
+  // Template butonları
+  document.querySelectorAll('.template-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const templateName = this.getAttribute('data-template');
+      loadTemplate(templateName);
+      
+      // Butonları aktif/pasif yap
+      document.querySelectorAll('.template-btn').forEach(b => {
+        b.style.background = 'white';
+        b.style.borderColor = '#d1d5db';
+      });
+      this.style.background = '#fef7f0';
+      this.style.borderColor = '#ea580c';
+    });
+  });
+  
+  // Template temizleme
+  const clearBtn = document.getElementById('clear-template');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', clearTemplate);
+  }
+}
+
+// Template yükle
+function loadTemplate(templateName) {
+  const template = sampleTemplates[templateName];
+  if (!template) return;
+  
+  document.getElementById('product-title').value = template.title;
+  document.getElementById('product-price').value = template.price;
+  document.getElementById('product-description').value = template.description;
+  document.getElementById('product-category').value = template.category;
+  
+  showNotification(`${templateName} şablonu yüklendi!`, 'success');
+}
+
+// Template temizle
+function clearTemplate() {
+  document.getElementById('product-title').value = '';
+  document.getElementById('product-price').value = '';
+  document.getElementById('product-description').value = '';
+  document.getElementById('product-category').value = 'tshirt';
+  
+  // Butonları sıfırla
+  document.querySelectorAll('.template-btn').forEach(btn => {
+    btn.style.background = 'white';
+    btn.style.borderColor = '#d1d5db';
+  });
+  
+  showNotification('Şablon temizlendi!', 'info');
+}
+
+// ================
+
+// Modal kapatma fonksiyonlarını güncelle
+function setupModalEvents() {
+  // Product modal kapatma
+  const productModal = document.getElementById('modal-product');
+  const productCloseBtn = document.getElementById('modal-product-close');
+  const productCancelBtn = document.getElementById('btn-cancel-product');
+  
+  if (productCloseBtn) {
+    productCloseBtn.addEventListener('click', () => {
+      productModal.classList.remove('active');
+    });
+  }
+  
+  if (productCancelBtn) {
+    productCancelBtn.addEventListener('click', () => {
+      productModal.classList.remove('active');
+    });
+  }
+  
+  // Mockup modal kapatma
+  const mockupModal = document.getElementById('modal-mockup');
+  const mockupCloseBtn = document.getElementById('modal-mockup-close');
+  const mockupCancelBtn = document.getElementById('btn-cancel-mockup');
+  
+  if (mockupCloseBtn) {
+    mockupCloseBtn.addEventListener('click', () => {
+      mockupModal.classList.remove('active');
+    });
+  }
+  
+  if (mockupCancelBtn) {
+    mockupCancelBtn.addEventListener('click', () => {
+      mockupModal.classList.remove('active');
+    });
+  }
+  
+  // Dışarı tıklayarak kapatma
+  if (productModal) {
+    productModal.addEventListener('click', (e) => {
+      if (e.target === productModal) {
+        productModal.classList.remove('active');
+      }
+    });
+  }
+  
+  if (mockupModal) {
+    mockupModal.addEventListener('click', (e) => {
+      if (e.target === mockupModal) {
+        mockupModal.classList.remove('active');
+      }
+    });
+  }
+}
+
+
+
+
+
+
