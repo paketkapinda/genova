@@ -1,13 +1,10 @@
 // Product CRUD, mockup triggers, publish flow
-// TAM ÇALIŞAN VERSİYON - Tüm butonlar entegre edilmiş
+// TAM ÇALIŞAN VERSİYON - Sadece kopyala-yapıştır yapın
 
 import { supabase } from './supabaseClient.js';
 import { api } from './api.js';
 import { showNotification, showModal, hideModal, setupModalClose, showLoading } from './ui.js';
 import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from './helpers.js';
-import { analyzeTopSellersWithAnimation } from './ai-top-seller-enhanced.js';
-import { showMockupGenerator } from './ai-mockup.js';
-import { generateSEOContent } from './ai-seo.js';
 
 let currentProducts = [];
 
@@ -66,7 +63,6 @@ export async function loadProducts() {
     container.classList.remove('hidden');
     
     renderProducts(currentProducts);
-    addMockupButtonsToProducts(); // Mockup butonlarını ekle
     
   } catch (error) {
     console.error('❌ Products yükleme hatası:', error);
@@ -102,7 +98,7 @@ function renderProducts(products) {
         <span class="product-category">${getCategoryName(product.category)}</span>
         <p class="product-description">${product.description || 'Açıklama yok'}</p>
         <div class="product-actions">
-          <!-- VIEW DETAILS BUTONU -->
+          <!-- VIEW DETAILS BUTONU EKLENDİ -->
           <button class="btn btn-outline btn-sm" onclick="viewProductDetails('${product.id}')">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -110,23 +106,12 @@ function renderProducts(products) {
             </svg>
             View Details
           </button>
-          
-          <!-- MOCKUP BUTONU -->
           <button class="btn btn-primary btn-sm" onclick="generateMockup('${product.id}')">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
             Mockup
           </button>
-          
-          <!-- AI MOCKUP BUTONU (Ek olarak) -->
-          <button class="btn btn-outline btn-sm btn-mockup" onclick="showMockupGenerator('${product.id}')">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-            </svg>
-            AI Mockups
-          </button>
-          
           ${product.status !== 'listed' 
             ? `<button class="btn btn-primary btn-sm" onclick="publishProduct('${product.id}')">
                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
@@ -142,7 +127,7 @@ function renderProducts(products) {
   `).join('');
 }
 
-// View Details fonksiyonu
+// View Details fonksiyonu - products.js'e ekle
 window.viewProductDetails = function(productId) {
   console.log('🔍 Product details:', productId);
   window.location.href = `/product-detail.html?id=${productId}`;
@@ -203,10 +188,9 @@ function loadMockProducts() {
   }
 
   if (empty) empty.classList.add('hidden');
-    container.classList.remove('hidden');
+  container.classList.remove('hidden');
   
   renderProducts(currentProducts);
-  addMockupButtonsToProducts(); // Mockup butonlarını ekle
 }
 
 // Global functions
@@ -275,11 +259,6 @@ window.editProduct = async function(productId) {
   
   document.getElementById('modal-product-title').textContent = 'Ürünü Düzenle';
   
-  // AI butonlarını ekle
-  setTimeout(() => {
-    addAIButtonsToProductForm();
-  }, 100);
-  
   // Modalı aç
   const productModal = document.getElementById('modal-product');
   if (productModal) {
@@ -337,9 +316,6 @@ export function initProductForm() {
   if (form) {
     form.addEventListener('submit', handleFormSubmit);
   }
-
-  // Top Sellers butonunu ekle
-  addTopSellersButton();
 }
 
 // Modal açma fonksiyonu
@@ -358,11 +334,6 @@ function openProductModal() {
     document.querySelector('.toggle-knob').style.left = '3px';
     document.querySelector('.template-toggle span').textContent = 'Örnek Göster';
   }
-  
-  // AI butonlarını ekle
-  setTimeout(() => {
-    addAIButtonsToProductForm();
-  }, 100);
   
   const productModal = document.getElementById('modal-product');
   if (productModal) {
@@ -433,6 +404,23 @@ async function handleFormSubmit(e) {
     showNotification('İşlem başarısız: ' + error.message, 'error');
   }
 }
+// Sayfa yüklendiğinde çalıştır
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🚀 Products.js yüklendi');
+  
+  if (document.getElementById('products-grid')) {
+    loadProducts();
+    initProductForm();
+  }
+});
+
+// Manual init for backward compatibility
+if (document.getElementById('products-grid')) {
+  loadProducts();
+  initProductForm();
+}
+
+//=======================
 
 // Örnek şablon verileri
 const sampleTemplates = {
@@ -586,6 +574,8 @@ function clearTemplate() {
   showNotification('Şablon temizlendi!', 'info');
 }
 
+// ================
+
 // Modal kapatma fonksiyonlarını güncelle
 function setupModalEvents() {
   // Product modal kapatma
@@ -640,176 +630,64 @@ function setupModalEvents() {
   }
 }
 
-// AI Buton fonksiyonları
-function addAIButtonsToProductForm() {
-  const productForm = document.getElementById('form-product');
-  if (!productForm) return;
-
-  // Description alanına AI butonu ekle
-  const descriptionGroup = productForm.querySelector('#product-description').closest('.form-group');
-  if (descriptionGroup && !descriptionGroup.querySelector('.ai-button')) {
-    const aiDescBtn = document.createElement('button');
-    aiDescBtn.type = 'button';
-    aiDescBtn.className = 'btn btn-sm btn-outline ai-button';
-    aiDescBtn.innerHTML = `
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-      </svg>
-      AI Generate
-    `;
-    aiDescBtn.onclick = generateProductDescription;
-    descriptionGroup.appendChild(aiDescBtn);
-  }
-
-  // Tags alanına AI butonu ekle (eğer tags input'u varsa)
-  const tagsInput = productForm.querySelector('#product-tags');
-  if (tagsInput && !tagsInput.closest('.form-group').querySelector('.ai-button')) {
-    const tagsGroup = tagsInput.closest('.form-group');
-    const aiTagsBtn = document.createElement('button');
-    aiTagsBtn.type = 'button';
-    aiTagsBtn.className = 'btn btn-sm btn-outline ai-button';
-    aiTagsBtn.innerHTML = `
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-      </svg>
-      AI Generate
-    `;
-    aiTagsBtn.onclick = generateProductTags;
-    tagsGroup.appendChild(aiTagsBtn);
-  }
-}
-
-// AI Description generation
-async function generateProductDescription() {
-  const titleInput = document.getElementById('product-title');
-  const categorySelect = document.getElementById('product-category');
-  const descriptionTextarea = document.getElementById('product-description');
+// products.js içinde - product card oluşturan fonksiyona buton ekleyin
+function createProductCard(product) {
+  const statusClass = getStatusClass(product.status);
+  const categoryIcon = getCategoryIcon(product.category);
   
-  if (!titleInput.value) {
-    showNotification('Please enter product title first', 'warning');
-    return;
-  }
-
-  try {
-    showNotification('Generating description with AI...', 'info');
-    
-    const result = await generateSEOContent('', 'description', titleInput.value, categorySelect.value);
-    if (result && result.description) {
-      descriptionTextarea.value = result.description;
-      showNotification('Description generated successfully!', 'success');
-    }
-  } catch (error) {
-    console.error('Error generating description:', error);
-    showNotification('Error generating description', 'error');
-  }
-}
-
-// AI Tags generation
-async function generateProductTags() {
-  const titleInput = document.getElementById('product-title');
-  const categorySelect = document.getElementById('product-category');
-  const tagsInput = document.getElementById('product-tags');
-  
-  if (!titleInput.value) {
-    showNotification('Please enter product title first', 'warning');
-    return;
-  }
-
-  try {
-    showNotification('Generating tags with AI...', 'info');
-    
-    const result = await generateSEOContent('', 'tags', titleInput.value, categorySelect.value);
-    if (result && result.tags) {
-      tagsInput.value = result.tags.join(', ');
-      showNotification('Tags generated successfully!', 'success');
-    }
-  } catch (error) {
-    console.error('Error generating tags:', error);
-    showNotification('Error generating tags', 'error');
-  }
-}
-
-// Product kartlarına mockup butonu ekle
-export function addMockupButtonsToProducts() {
-  const productCards = document.querySelectorAll('.product-card');
-  productCards.forEach(card => {
-    const productId = card.dataset.productId;
-    const actionsContainer = card.querySelector('.product-actions');
-    
-    if (actionsContainer && !actionsContainer.querySelector('.btn-mockup')) {
-      const mockupBtn = document.createElement('button');
-      mockupBtn.className = 'btn btn-sm btn-outline btn-mockup';
-      mockupBtn.innerHTML = `
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-        </svg>
-        AI Mockups
-      `;
-      mockupBtn.onclick = () => showMockupGenerator(productId);
-      actionsContainer.appendChild(mockupBtn);
-    }
-  });
-}
-
-// Top Sellers butonu ekle
-function addTopSellersButton() {
-  const productsHeader = document.querySelector('.products-header');
-  if (productsHeader && !productsHeader.querySelector('#btn-analyze-top-sellers')) {
-    const topSellersBtn = document.createElement('button');
-    topSellersBtn.id = 'btn-analyze-top-sellers';
-    topSellersBtn.className = 'btn btn-outline';
-    topSellersBtn.innerHTML = `
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
-      </svg>
-      Analyze Top Sellers
-    `;
-    topSellersBtn.onclick = async () => {
-      const shopId = await getActiveShopId();
-      if (shopId) {
-        analyzeTopSellersWithAnimation(shopId);
-      } else {
-        showNotification('Please connect an Etsy shop first', 'warning');
-      }
-    };
-    productsHeader.appendChild(topSellersBtn);
-  }
-}
-
-// Aktif Etsy mağazasını bul
-async function getActiveShopId() {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: shops } = await supabase
-      .from('etsy_accounts')
-      .select('shop_id')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .limit(1);
-    
-    return shops && shops.length > 0 ? shops[0].shop_id : null;
-  } catch (error) {
-    console.error('Error getting active shop:', error);
-    return null;
-  }
-}
-
-// Sayfa yüklendiğinde çalıştır
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('🚀 Products.js yüklendi');
-  
-  if (document.getElementById('products-grid')) {
-    loadProducts();
-    initProductForm();
-    setupViewDetailButtons();
-  }
-});
-
-// Manual init for backward compatibility
-if (document.getElementById('products-grid')) {
-  loadProducts();
-  initProductForm();
-  setupViewDetailButtons();
+  return `
+    <div class="product-card" data-product-id="${product.id}">
+      <div class="product-card-header">
+        <div class="product-image">
+          <img src="${product.image_url || '/assets/images/placeholder-product.jpg'}" 
+               alt="${product.title}" 
+               class="product-img" />
+          <div class="product-overlay">
+            <button class="btn-view-detail" data-product-id="${product.id}">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+              View Details
+            </button>
+          </div>
+        </div>
+        <div class="product-badge ${statusClass}">
+          ${product.status}
+        </div>
+      </div>
+      
+      <div class="product-card-body">
+        <div class="product-category">
+          ${categoryIcon}
+          <span>${getCategoryName(product.category)}</span>
+        </div>
+        <h3 class="product-title">${product.title}</h3>
+        <p class="product-description">${product.description || 'No description available'}</p>
+        
+        <div class="product-meta">
+          <div class="product-price">$${parseFloat(product.price).toFixed(2)}</div>
+          <div class="product-date">${formatDate(product.created_at)}</div>
+        </div>
+      </div>
+      
+      <div class="product-card-actions">
+        <button class="btn btn-outline btn-sm btn-view-detail" data-product-id="${product.id}">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+          View Details
+        </button>
+        <button class="btn btn-primary btn-sm btn-generate-mockup" data-product-id="${product.id}">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          Mockup
+        </button>
+      </div>
+    </div>
+  `;
 }
 
 // View Details butonlarına event listener ekleyin
@@ -819,11 +697,19 @@ function setupViewDetailButtons() {
     if (viewDetailBtn) {
       const productId = viewDetailBtn.dataset.productId;
       if (productId) {
+        // Product detail sayfasına yönlendir
         window.location.href = `/product-detail.html?id=${productId}`;
       }
     }
   });
 }
 
-// Global scope'ta showMockupGenerator fonksiyonunu tanımla
-window.showMockupGenerator = showMockupGenerator;
+// Sayfa yüklendiğinde buton event'lerini kur
+document.addEventListener('DOMContentLoaded', function() {
+  setupViewDetailButtons();
+  // Diğer mevcut kodlar...
+});
+
+
+
+
