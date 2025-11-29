@@ -18,9 +18,16 @@
 /* Products Header */
 .products-header {
   display: flex;
-  justify-content: between;
+  justify-content: space-between;
   align-items: center;
   margin-bottom: 32px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.products-title {
+  flex: 1;
+  min-width: 300px;
 }
 
 .products-title h1 {
@@ -33,6 +40,12 @@
 .products-title p {
   color: #6b7280;
   font-size: 16px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 /* Products Grid */
@@ -103,9 +116,10 @@
 
 .product-header {
   display: flex;
-  justify-content: between;
-  align-items: start;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 12px;
+  gap: 12px;
 }
 
 .product-title {
@@ -114,7 +128,7 @@
   color: #18181b;
   line-height: 1.4;
   flex: 1;
-  margin-right: 12px;
+  margin: 0;
 }
 
 .product-price {
@@ -149,6 +163,13 @@
 .product-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.product-actions .btn {
+  flex: 1;
+  min-width: 100px;
+  justify-content: center;
 }
 
 /* Empty State */
@@ -196,6 +217,7 @@
   gap: 16px;
   margin-bottom: 24px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .filter-group {
@@ -242,7 +264,6 @@
 }
 
 .btn-flex {
-  width: auto;
   flex: 1;
 }
 
@@ -255,6 +276,24 @@
 .btn-outline:hover {
   border-color: #ea580c;
   color: #ea580c;
+  background: #fef7f0;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* AI Butonları */
+.ai-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ai-button {
+  font-size: 12px !important;
+  padding: 4px 8px !important;
 }
 
 /* Mockup Modal */
@@ -328,8 +367,16 @@
 @media (max-width: 768px) {
   .products-header {
     flex-direction: column;
-    gap: 16px;
     align-items: stretch;
+  }
+  
+  .header-actions {
+    justify-content: stretch;
+  }
+  
+  .header-actions .btn {
+    flex: 1;
+    min-width: auto;
   }
   
   .products-grid {
@@ -348,11 +395,27 @@
   .filter-group {
     justify-content: space-between;
   }
+  
+  .product-actions {
+    flex-direction: column;
+  }
+  
+  .product-actions .btn {
+    min-width: auto;
+  }
 }
 
-  /* style.css'ye ekle */
+@media (max-width: 480px) {
+  .products-title h1 {
+    font-size: 24px;
+  }
+  
+  .header-actions {
+    flex-direction: column;
+  }
+}
 
-/* Modal Styles */
+  /* Modal Styles */
 .modal {
   display: none;
   position: fixed;
@@ -364,6 +427,7 @@
   z-index: 1000;
   align-items: center;
   justify-content: center;
+  padding: 20px;
 }
 
 .modal.active {
@@ -377,6 +441,8 @@
   position: relative;
   max-height: 90vh;
   overflow-y: auto;
+  width: 100%;
+  max-width: 600px;
 }
 
 .modal-close {
@@ -388,6 +454,16 @@
   font-size: 24px;
   cursor: pointer;
   color: #6b7280;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.modal-close:hover {
+  background: #f3f4f6;
 }
 
 /* Form Styles */
@@ -410,6 +486,7 @@
   border-radius: 8px;
   font-size: 14px;
   background: white;
+  transition: all 0.2s ease;
 }
 
 .form-input:focus, .select-input:focus {
@@ -431,6 +508,8 @@
   cursor: pointer;
   transition: all 0.2s ease;
   text-decoration: none;
+  justify-content: center;
+  white-space: nowrap;
 }
 
 .btn-primary {
@@ -440,6 +519,7 @@
 
 .btn-primary:hover {
   background: #c2410c;
+  transform: translateY(-1px);
 }
 
 .btn-outline {
@@ -451,6 +531,8 @@
 .btn-outline:hover {
   border-color: #ea580c;
   color: #ea580c;
+  background: #fef7f0;
+  transform: translateY(-1px);
 }
 
 .btn-sm {
@@ -465,6 +547,14 @@
 
 .justify-between {
   justify-content: space-between;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.mb-4 {
+  margin-bottom: 16px;
 }
   </style>
   </head>
@@ -544,32 +634,21 @@
             <h1>Products</h1>
             <p>Manage your product catalog and generate mockups</p>
           </div>
-          <button class="btn btn-primary" id="btn-new-product">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-            </svg>
-            New Product
-          </button>
-		<!-- products.html'e butonlar ekle -->
-		<button class="btn btn-outline" onclick="analyzeTopSellers('current_shop')">
-  		Analyze Top Sellers
-		</button>
-
-		<button class="btn btn-outline" onclick="showMockupGenerator('product_id')">
-  		Generate Mockups
-		</button>
-
-		<!-- product formuna SEO butonları -->
-		<div class="form-actions">
-  		<button type="button" id="btn-generate-description" class="btn btn-outline">
-    		AI Generate Description
-  		</button>
-  		<button type="button" id="btn-generate-tags" class="btn btn-outline">
-    		AI Generate Tags
-  		</button>
-		</div>
+          <div class="header-actions">
+            <button class="btn btn-outline" id="btn-analyze-top-sellers">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+              </svg>
+              Analyze Top Sellers
+            </button>
+            <button class="btn btn-primary" id="btn-new-product">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+              </svg>
+              New Product
+            </button>
+          </div>
         </header>
-
 
         <!-- Filters -->
         <div class="products-filters">
@@ -696,6 +775,14 @@
               class="form-input"
               style="resize: vertical;"
             ></textarea>
+            <div class="ai-buttons">
+              <button type="button" class="btn btn-outline btn-sm ai-button" id="btn-generate-description">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="12" height="12">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                AI Generate
+              </button>
+            </div>
           </div>
 
           <div class="form-actions">
@@ -721,7 +808,6 @@
       </div>
     </div>
 
-    
     <!-- JavaScript Import -->
     <script src="/assets/js/env.js"></script>
     <script type="module" src="/assets/js/supabaseClient.js"></script>
@@ -729,5 +815,10 @@
     <script type="module" src="/assets/js/api.js"></script>
     <script type="module" src="/assets/js/ui.js"></script>
     <script type="module" src="/assets/js/products.js"></script>
+	<script type="module" src="/assets/js/ai-top-seller-enhanced.js"></script>
+    <script type="module" src="/assets/js/ai-mockup.js"></script>
+    <script type="module" src="/assets/js/ai-seo.js"></script>  
+
+	  
   </body>
 </html>
