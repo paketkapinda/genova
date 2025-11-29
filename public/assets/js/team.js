@@ -1,7 +1,7 @@
 // Team member invite, role management
 
 import { supabase } from './supabaseClient.js';
-import { showNotification, showModal, hideModal, setupModalClose } from './ui.js';
+import { showNotification } from './ui.js';
 import { formatDate } from './helpers.js';
 
 export async function loadTeamMembers() {
