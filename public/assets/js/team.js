@@ -109,6 +109,7 @@ export async function loadTeamMembers() {
   }
 }
 
+
 export function initTeamInvite() {
   const btnInvite = document.getElementById('btn-invite-member');
   if (!btnInvite) return;
@@ -170,6 +171,22 @@ async function showInviteModal() {
     </div>
   `;
 
+  // team.js - Updated version
+// Add this to the loadTeamMembers function, after the empty state check
+const inviteButtonHTML = `
+  <div style="text-align: center; margin-top: 1rem;">
+    <button class="settings-btn settings-btn-outline" onclick="showInviteModal()" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Invite Team Member
+    </button>
+  </div>
+`;
+
+// Add this to the container when there are team members
+container.innerHTML += inviteButtonHTML;
+  
   // Add modal to page
   const modalContainer = document.createElement('div');
   modalContainer.innerHTML = modalHTML;
