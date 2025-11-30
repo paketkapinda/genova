@@ -490,22 +490,56 @@ document.addEventListener('DOMContentLoaded', function() {
     const generateSEOBtn = document.getElementById('btn-generate-seo');
     const analyzeTopSellerBtn = document.getElementById('btn-analyze-top-seller');
 
-  // AI Tool butonları - Fallback fonksiyonları kullan
+ // AI Tool butonları - Gerçek AI ile
     generateDescriptionBtn.addEventListener('click', async function() {
-        const response = await window.quickGenerateDescription();
-        addMessage(response, 'assistant');
+        const productData = {
+            name: "Custom T-Shirt Design",
+            type: "Apparel",
+            keywords: ["vintage", "graphic tee", "unisex"],
+            audience: "Young adults 18-30"
+        };
+        
+        try {
+            const response = await window.generateProductDescriptionAI(productData);
+            addMessage(response, 'assistant');
+        } catch (error) {
+            addMessage("I need more information to generate a product description. Could you tell me about your product?", 'assistant');
+        }
     });
+
 
     generateSEOBtn.addEventListener('click', async function() {
-        const response = await window.quickGenerateSEO();
-        addMessage(response, 'assistant');
+        const productData = {
+            name: "Handmade Ceramic Mug",
+            category: "Home & Living",
+            materials: ["ceramic", "glaze"],
+            style: "minimalist"
+        };
+        
+        try {
+            const response = await window.generateSEOTagsAI(productData);
+            addMessage(response, 'assistant');
+        } catch (error) {
+            addMessage("Let me help you with SEO! What product are you listing?", 'assistant');
+        }
     });
-
+  
     analyzeTopSellerBtn.addEventListener('click', async function() {
-        const response = await window.quickAnalyzePerformance();
-        addMessage(response, 'assistant');
+        // Gerçek satış verilerini al (örnek)
+        const salesData = {
+            totalSales: 150,
+            conversionRate: 3.2,
+            averageOrderValue: 28.50,
+            topProducts: ["T-Shirt - Vintage Design", "Mug - Minimalist", "Sticker Pack"]
+        };
+        
+        try {
+            const response = await window.analyzeSalesAI(salesData);
+            addMessage(response, 'assistant');
+        } catch (error) {
+            addMessage("I'd love to analyze your sales! Do you have specific data you'd like me to look at?", 'assistant');
+        }
     });
-
     // Geliştirilmiş sendMessage fonksiyonu
     async function sendMessage() {
         const message = chatInput.value.trim();
@@ -683,5 +717,6 @@ document.addEventListener('DOMContentLoaded', function() {
   </body>
 
 </html>
+
 
 
