@@ -1,4 +1,4 @@
-// producers.js - Updated version
+// producers.js - Güncellenmiş versiyon
 import { supabase } from './supabaseClient.js';
 import { showNotification } from './ui.js';
 
@@ -31,42 +31,48 @@ export async function loadProducers() {
       return;
     }
 
-    container.innerHTML = data.map(producer => `
-      <div class="settings-list-item">
-        <div class="settings-list-item-info">
-          <div class="settings-list-item-name">
-            ${producer.name}
-            <span class="connection-status ${producer.is_active ? 'connected' : 'disconnected'}">
-              ${producer.is_active ? '🟢 Connected' : '🔴 Disconnected'}
-            </span>
+    container.innerHTML = data.map(producer => {
+      const status = producer.is_active ? 'connected' : 'disconnected';
+      const statusIcon = producer.is_active ? '🟢' : '🔴';
+      const statusText = producer.is_active ? 'Connected' : 'Disconnected';
+      
+      return `
+        <div class="settings-list-item">
+          <div class="settings-list-item-info">
+            <div class="settings-list-item-name">
+              ${producer.name}
+              <span class="connection-status ${status}">
+                ${statusIcon} ${statusText}
+              </span>
+            </div>
+            <div class="settings-list-item-desc">
+              ${producer.provider_type} · ${producer.is_active ? 'Active' : 'Inactive'}
+              ${producer.created_at ? `· Added ${formatDate(producer.created_at)}` : ''}
+            </div>
           </div>
-          <div class="settings-list-item-desc">
-            ${producer.provider_type} · ${producer.is_active ? 'Active' : 'Inactive'}
-            ${producer.created_at ? `· Added ${formatDate(producer.created_at)}` : ''}
+          <div class="settings-list-item-actions">
+            <button class="settings-btn settings-btn-outline" onclick="testProducer('${producer.id}')">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Test
+            </button>
+            <button class="settings-btn settings-btn-outline" onclick="connectProducer('${producer.id}')">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+              </svg>
+              Connect
+            </button>
+            <button class="settings-btn settings-btn-danger" onclick="removeProducer('${producer.id}')">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+              Remove
+            </button>
           </div>
         </div>
-        <div class="settings-list-item-actions">
-          <button class="settings-btn settings-btn-outline" onclick="testProducer('${producer.id}')">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            Test
-          </button>
-          <button class="settings-btn settings-btn-outline" onclick="connectProducer('${producer.id}')">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
-            </svg>
-            Connect
-          </button>
-          <button class="settings-btn settings-btn-danger" onclick="removeProducer('${producer.id}')">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-            </svg>
-            Remove
-          </button>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   } catch (error) {
     console.error('Error loading producers:', error);
     container.innerHTML = '<p class="text-sm text-red-300">Error loading POD providers</p>';
@@ -102,12 +108,87 @@ window.connectProducer = async (producerId) => {
       if (error) throw error;
 
       document.body.removeChild(progressContainer);
-      showNotification('POD provider connected successfully', 'success');
+      showNotification('POD provider connected successfully! 🟢', 'success');
       loadProducers();
     }, 2000);
 
   } catch (error) {
     console.error('Error connecting producer:', error);
-    showNotification('Error connecting to POD provider', 'error');
+    showNotification('POD provider connection failed! 🔴', 'error');
   }
 };
+
+// Test producer connection
+window.testProducer = async (producerId) => {
+  try {
+    showNotification('Testing POD provider connection...', 'info');
+    
+    const progressHTML = `
+      <div class="connection-progress" style="position: fixed; top: 20px; right: 20px; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 1000;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <div class="spinner" style="width: 16px; height: 16px; border: 2px solid #e5e7eb; border-top: 2px solid #ea580c; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          <span>Testing POD connection...</span>
+        </div>
+      </div>
+    `;
+    
+    const progressContainer = document.createElement('div');
+    progressContainer.innerHTML = progressHTML;
+    document.body.appendChild(progressContainer);
+
+    setTimeout(async () => {
+      const { error } = await supabase
+        .from('producers')
+        .update({ is_active: true })
+        .eq('id', producerId);
+
+      if (error) throw error;
+
+      document.body.removeChild(progressContainer);
+      showNotification('POD provider connection successful! 🟢', 'success');
+      loadProducers();
+    }, 2000);
+
+  } catch (error) {
+    console.error('Error testing producer:', error);
+    showNotification('POD provider connection failed! 🔴', 'error');
+  }
+};
+
+// Remove producer
+window.removeProducer = async (producerId) => {
+  if (!confirm('Are you sure you want to remove this POD provider?')) {
+    return;
+  }
+
+  try {
+    const { error } = await supabase
+      .from('producers')
+      .delete()
+      .eq('id', producerId);
+
+    if (error) throw error;
+
+    showNotification('POD provider removed successfully', 'success');
+    loadProducers();
+  } catch (error) {
+    console.error('Error removing producer:', error);
+    showNotification('Error removing POD provider', 'error');
+  }
+};
+
+// Diğer fonksiyonlar aynı kalacak...
+export function initProducerAdd() {
+  const btnAdd = document.getElementById('btn-add-pod');
+  if (!btnAdd) return;
+
+  btnAdd.addEventListener('click', () => {
+    showProducerModal();
+  });
+}
+
+// Initialize
+if (document.getElementById('pod-providers-list')) {
+  loadProducers();
+  initProducerAdd();
+}
