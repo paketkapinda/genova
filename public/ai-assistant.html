@@ -269,6 +269,33 @@
   }
 }
 
+  /* Input auto-resize için */
+.chat-input {
+    resize: none;
+    min-height: 44px;
+    max-height: 120px;
+}
+
+/* Buton hover efektleri */
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Responsive iyileştirmeler */
+@media (max-width: 768px) {
+    .ai-tools-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .chat-input-container {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .chat-send-btn {
+        width: 100%;
+    }
+}
 </style>
 
   </head>
@@ -449,13 +476,194 @@
       </main>
     </div>
 
-    <!-- JavaScript Import -->
-    <script src="/assets/js/env.js"></script>
-    <script type="module" src="/assets/js/supabaseClient.js"></script>
-    <script type="module" src="/assets/js/auth.js"></script>
-    <script type="module" src="/assets/js/api.js"></script>
-    <script type="module" src="/assets/js/ui.js"></script>
-    <script type="module" src="/assets/js/ai.js"></script>
+    <!-- Body'nin sonuna şu script'i ekleyelim -->
+<script>
+// AI Assistant Chat Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const sendButton = document.getElementById('btn-send-chat');
+    const clearButton = document.getElementById('btn-clear-chat');
+
+    // AI Tool butonları
+    const generateDescriptionBtn = document.getElementById('btn-generate-description');
+    const generateSEOBtn = document.getElementById('btn-generate-seo');
+    const analyzeTopSellerBtn = document.getElementById('btn-analyze-top-seller');
+
+    // Mesaj gönderme fonksiyonu
+    async function sendMessage() {
+        const message = chatInput.value.trim();
+        if (!message) return;
+
+        // Kullanıcı mesajını ekle
+        addMessage(message, 'user');
+        chatInput.value = '';
+
+        // Loading mesajı ekle
+        const loadingId = addLoadingMessage();
+
+        try {
+            // AI yanıtını al
+            const aiResponse = await window.sendAIChatMessage(message, getChatHistory());
+            
+            // Loading mesajını kaldır
+            removeLoadingMessage(loadingId);
+            
+            // AI yanıtını ekle
+            addMessage(aiResponse, 'assistant');
+            
+        } catch (error) {
+            removeLoadingMessage(loadingId);
+            addMessage("I'm sorry, I'm having trouble responding right now. Please try again.", 'assistant');
+            console.error('Chat error:', error);
+        }
+    }
+
+    // Mesaj ekleme fonksiyonu
+    function addMessage(content, type) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message ${type}-message`;
+        
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        
+        const messageContent = document.createElement('div');
+        messageContent.className = 'message-content';
+        
+        if (type === 'user') {
+            avatar.innerHTML = `
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+            `;
+            messageDiv.appendChild(messageContent);
+            messageDiv.appendChild(avatar);
+        } else {
+            avatar.innerHTML = `
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            `;
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+        }
+        
+        messageContent.innerHTML = `<p>${content}</p>`;
+        chatMessages.appendChild(messageDiv);
+        
+        // Scroll to bottom
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Loading mesajı ekle
+    function addLoadingMessage() {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message ai-message';
+        messageDiv.id = 'loading-message';
+        
+        messageDiv.innerHTML = `
+            <div class="message-avatar">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+            <div class="message-content">
+                <div class="chat-loading">
+                    <div class="chat-loading-dot"></div>
+                    <div class="chat-loading-dot"></div>
+                    <div class="chat-loading-dot"></div>
+                </div>
+            </div>
+        `;
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        return 'loading-message';
+    }
+
+    // Loading mesajını kaldır
+    function removeLoadingMessage(messageId) {
+        const loadingMessage = document.getElementById(messageId);
+        if (loadingMessage) {
+            loadingMessage.remove();
+        }
+    }
+
+    // Sohbet geçmişini al
+    function getChatHistory() {
+        const messages = [];
+        const messageElements = chatMessages.querySelectorAll('.chat-message');
+        
+        messageElements.forEach(element => {
+            if (element.id !== 'loading-message') {
+                const content = element.querySelector('.message-content p').textContent;
+                const type = element.classList.contains('user-message') ? 'user' : 'assistant';
+                messages.push({ role: type, content: content });
+            }
+        });
+        
+        return messages;
+    }
+
+    // Event listeners
+    sendButton.addEventListener('click', sendMessage);
+    
+    chatInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+    clearButton.addEventListener('click', function() {
+        chatMessages.innerHTML = `
+            <div class="chat-message ai-message">
+                <div class="message-avatar">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+                <div class="message-content">
+                    <p>Hello! I can help you generate product descriptions, SEO tags, and analyze top sellers. What would you like to do?</p>
+                </div>
+            </div>
+        `;
+    });
+
+    // AI Tool butonları
+    generateDescriptionBtn.addEventListener('click', function() {
+        chatInput.value = "Can you help me generate a product description for a new t-shirt design?";
+        sendMessage();
+    });
+
+    generateSEOBtn.addEventListener('click', function() {
+        chatInput.value = "I need SEO tags for a handmade ceramic mug listing on Etsy";
+        sendMessage();
+    });
+
+    analyzeTopSellerBtn.addEventListener('click', function() {
+        chatInput.value = "Can you analyze my top selling products and give me insights?";
+        sendMessage();
+    });
+
+    // Input auto-resize
+    chatInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+
+    console.log('🤖 AI Assistant chat initialized');
+});
+</script>
+<!-- JavaScript Import -->
+<script src="/assets/js/env.js"></script>
+<script type="module" src="/assets/js/supabaseClient.js"></script>
+<script type="module" src="/assets/js/auth.js"></script>
+<script type="module" src="/assets/js/api.js"></script>
+<script type="module" src="/assets/js/ui.js"></script>
+<script type="module" src="/assets/js/ai.js"></script>
+<script type="module" src="/assets/js/ai-messagereply.js"></script>
   </body>
 
 </html>
+
