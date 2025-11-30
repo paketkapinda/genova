@@ -1,4 +1,4 @@
-// producers.js - Güncellenmiş versiyon
+// producers.js - Düzeltilmiş versiyon
 import { supabase } from './supabaseClient.js';
 import { showNotification } from './ui.js';
 
@@ -79,43 +79,117 @@ export async function loadProducers() {
   }
 }
 
-// Connect producer
-window.connectProducer = async (producerId) => {
-  try {
-    showNotification('Connecting to POD provider...', 'info');
-    
-    // Show connection progress
-    const progressHTML = `
-      <div class="connection-progress" style="position: fixed; top: 20px; right: 20px; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 1000;">
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <div class="spinner" style="width: 16px; height: 16px; border: 2px solid #e5e7eb; border-top: 2px solid #ea580c; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-          <span>Connecting to POD provider...</span>
+export function initProducerAdd() {
+  const btnAdd = document.getElementById('btn-add-pod');
+  if (!btnAdd) return;
+
+  btnAdd.addEventListener('click', () => {
+    showProducerModal();
+  });
+}
+
+// Global olarak tanımla
+window.showProducerModal = function() {
+  const modalHTML = `
+    <div class="modal-overlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+      <div class="modal-content" style="background: white; border-radius: 12px; padding: 0; min-width: 400px; max-width: 500px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+        <div class="modal-header" style="padding: 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+          <h3 class="modal-title" style="font-size: 1.25rem; font-weight: 600; color: #111827; margin: 0;">Add POD Provider</h3>
+          <button class="modal-close" onclick="closeProducerModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280;">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 1.5rem;">
+          <form id="producer-form" class="settings-form">
+            <div class="settings-form-group">
+              <label class="settings-form-label">Provider Name</label>
+              <input type="text" id="producer-name" class="settings-form-input" placeholder="My Printify Account" required>
+            </div>
+            <div class="settings-form-group">
+              <label class="settings-form-label">Provider Type</label>
+              <select id="producer-type" class="settings-form-input">
+                <option value="printify">Printify</option>
+                <option value="printful">Printful</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+            <div class="settings-form-group">
+              <label class="settings-form-label">API Key</label>
+              <input type="password" id="producer-api-key" class="settings-form-input" placeholder="Enter API key">
+            </div>
+            <div class="settings-form-group">
+              <label class="settings-form-label">API Secret</label>
+              <input type="password" id="producer-api-secret" class="settings-form-input" placeholder="Enter API secret">
+            </div>
+            <div class="settings-form-group">
+              <label class="settings-form-label">Base URL (Optional)</label>
+              <input type="text" id="producer-base-url" class="settings-form-input" placeholder="https://api.example.com">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer" style="padding: 1.5rem; border-top: 1px solid #e5e7eb; display: flex; gap: 0.75rem; justify-content: flex-end;">
+          <button class="settings-btn settings-btn-outline" onclick="closeProducerModal()">Cancel</button>
+          <button class="settings-btn settings-btn-primary" onclick="submitProducer()">Add Provider</button>
         </div>
       </div>
-    `;
-    
-    const progressContainer = document.createElement('div');
-    progressContainer.innerHTML = progressHTML;
-    document.body.appendChild(progressContainer);
+    </div>
+  `;
 
-    // Simulate connection process
-    setTimeout(async () => {
-      const { error } = await supabase
+  const modalContainer = document.createElement('div');
+  modalContainer.innerHTML = modalHTML;
+  document.body.appendChild(modalContainer);
+
+  window.closeProducerModal = () => {
+    if (document.body.contains(modalContainer)) {
+      document.body.removeChild(modalContainer);
+    }
+  };
+
+  window.submitProducer = async () => {
+    const name = document.getElementById('producer-name').value;
+    const type = document.getElementById('producer-type').value;
+    const apiKey = document.getElementById('producer-api-key').value;
+    const apiSecret = document.getElementById('producer-api-secret').value;
+    const baseUrl = document.getElementById('producer-base-url').value;
+
+    if (!name) {
+      showNotification('Please enter a provider name', 'error');
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
         .from('producers')
-        .update({ is_active: true })
-        .eq('id', producerId);
+        .insert([
+          {
+            user_id: user.id,
+            name: name,
+            provider_type: type,
+            api_key_encrypted: apiKey,
+            api_secret_encrypted: apiSecret,
+            base_url: baseUrl,
+            is_active: false
+          }
+        ])
+        .select();
 
       if (error) throw error;
 
-      document.body.removeChild(progressContainer);
-      showNotification('POD provider connected successfully! 🟢', 'success');
+      showNotification('POD provider added successfully', 'success');
+      closeProducerModal();
       loadProducers();
-    }, 2000);
+    } catch (error) {
+      console.error('Error adding producer:', error);
+      showNotification('Error adding POD provider', 'error');
+    }
+  };
 
-  } catch (error) {
-    console.error('Error connecting producer:', error);
-    showNotification('POD provider connection failed! 🔴', 'error');
-  }
+  modalContainer.addEventListener('click', (e) => {
+    if (e.target === modalContainer) {
+      closeProducerModal();
+    }
+  });
 };
 
 // Test producer connection
@@ -155,6 +229,45 @@ window.testProducer = async (producerId) => {
   }
 };
 
+// Connect producer
+window.connectProducer = async (producerId) => {
+  try {
+    showNotification('Connecting to POD provider...', 'info');
+    
+    // Show connection progress
+    const progressHTML = `
+      <div class="connection-progress" style="position: fixed; top: 20px; right: 20px; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 1000;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <div class="spinner" style="width: 16px; height: 16px; border: 2px solid #e5e7eb; border-top: 2px solid #ea580c; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          <span>Connecting to POD provider...</span>
+        </div>
+      </div>
+    `;
+    
+    const progressContainer = document.createElement('div');
+    progressContainer.innerHTML = progressHTML;
+    document.body.appendChild(progressContainer);
+
+    // Simulate connection process
+    setTimeout(async () => {
+      const { error } = await supabase
+        .from('producers')
+        .update({ is_active: true })
+        .eq('id', producerId);
+
+      if (error) throw error;
+
+      document.body.removeChild(progressContainer);
+      showNotification('POD provider connected successfully! 🟢', 'success');
+      loadProducers();
+    }, 2000);
+
+  } catch (error) {
+    console.error('Error connecting producer:', error);
+    showNotification('POD provider connection failed! 🔴', 'error');
+  }
+};
+
 // Remove producer
 window.removeProducer = async (producerId) => {
   if (!confirm('Are you sure you want to remove this POD provider?')) {
@@ -176,16 +289,6 @@ window.removeProducer = async (producerId) => {
     showNotification('Error removing POD provider', 'error');
   }
 };
-
-// Diğer fonksiyonlar aynı kalacak...
-export function initProducerAdd() {
-  const btnAdd = document.getElementById('btn-add-pod');
-  if (!btnAdd) return;
-
-  btnAdd.addEventListener('click', () => {
-    showProducerModal();
-  });
-}
 
 // Initialize
 if (document.getElementById('pod-providers-list')) {
