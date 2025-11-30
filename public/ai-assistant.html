@@ -490,7 +490,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const generateSEOBtn = document.getElementById('btn-generate-seo');
     const analyzeTopSellerBtn = document.getElementById('btn-analyze-top-seller');
 
-    // Mesaj gönderme fonksiyonu
+  // AI Tool butonları - Fallback fonksiyonları kullan
+    generateDescriptionBtn.addEventListener('click', async function() {
+        const response = await window.quickGenerateDescription();
+        addMessage(response, 'assistant');
+    });
+
+    generateSEOBtn.addEventListener('click', async function() {
+        const response = await window.quickGenerateSEO();
+        addMessage(response, 'assistant');
+    });
+
+    analyzeTopSellerBtn.addEventListener('click', async function() {
+        const response = await window.quickAnalyzePerformance();
+        addMessage(response, 'assistant');
+    });
+
+    // Geliştirilmiş sendMessage fonksiyonu
     async function sendMessage() {
         const message = chatInput.value.trim();
         if (!message) return;
@@ -503,7 +519,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const loadingId = addLoadingMessage();
 
         try {
-            // AI yanıtını al
+            // AI yanıtını al (fallback ile)
             const aiResponse = await window.sendAIChatMessage(message, getChatHistory());
             
             // Loading mesajını kaldır
@@ -514,7 +530,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
         } catch (error) {
             removeLoadingMessage(loadingId);
-            addMessage("I'm sorry, I'm having trouble responding right now. Please try again.", 'assistant');
+            const fallbackResponse = "I'm here to help with your Etsy business! How can I assist you today?";
+            addMessage(fallbackResponse, 'assistant');
             console.error('Chat error:', error);
         }
     }
@@ -666,4 +683,5 @@ document.addEventListener('DOMContentLoaded', function() {
   </body>
 
 </html>
+
 
