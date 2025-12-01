@@ -2,12 +2,66 @@
 import { supabase } from './supabaseClient.js';
 import { showNotification } from './ui.js';
 
+// Aktif AI sağlayıcısını almak için yardımcı fonksiyon
+async function getActiveAIProvider() {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return null;
+
+        const { data: apiKeys, error } = await supabase
+            .from('ai_api_keys')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+
+        if (error) {
+            if (error.code === 'PGRST116') {
+                // Kayıt yok, default değerlerle devam et
+                console.log('No AI API keys found, using default configuration');
+                return { provider: 'openai', key: null };
+            }
+            throw error;
+        }
+
+        // Öncelik sırasına göre aktif sağlayıcıyı döndür
+        if (apiKeys.openai_active && apiKeys.openai_key_encrypted) {
+            return { 
+                provider: 'openai', 
+                key: apiKeys.openai_key_encrypted,
+                model: apiKeys.openai_model || 'gpt-4',
+                temperature: apiKeys.openai_temperature || 0.7
+            };
+        } else if (apiKeys.anthropic_active && apiKeys.anthropic_key_encrypted) {
+            return { 
+                provider: 'anthropic', 
+                key: apiKeys.anthropic_key_encrypted,
+                model: apiKeys.anthropic_model || 'claude-3-sonnet-20240229',
+                temperature: apiKeys.anthropic_temperature || 0.7
+            };
+        } else if (apiKeys.openrouter_active && apiKeys.openrouter_key_encrypted) {
+            return { 
+                provider: 'openrouter', 
+                key: apiKeys.openrouter_key_encrypted,
+                model: apiKeys.openrouter_model || 'openai/gpt-3.5-turbo',
+                temperature: apiKeys.openrouter_temperature || 0.7
+            };
+        }
+
+        return { provider: 'openai', key: null };
+    } catch (error) {
+        console.error('Error getting active AI provider:', error);
+        return { provider: 'openai', key: null };
+    }
+}
+
 // ===== PRODUCT CONTENT GENERATION =====
 window.generateProductDescription = async function(productData) {
     try {
         showNotification('Generating product description...', 'info');
         
+        const activeProvider = await getActiveAIProvider();
         const { data: { session } } = await supabase.auth.getSession();
+        
         const response = await fetch('/api/generate-description', {
             method: 'POST',
             headers: {
@@ -19,27 +73,63 @@ window.generateProductDescription = async function(productData) {
                 productType: productData.type,
                 keywords: productData.keywords,
                 targetAudience: productData.audience,
-                style: productData.style || 'professional'
+                style: productData.style || 'professional',
+                aiProvider: activeProvider.provider,
+                apiKey: activeProvider.key,
+                model: activeProvider.model,
+                temperature: activeProvider.temperature
             })
         });
 
-        if (!response.ok) throw new Error('Description generation failed');
+        if (!response.ok) {
+            // Fallback: Direkt AI chat kullan
+            return await generateProductDescriptionFallback(productData);
+        }
         
         const result = await response.json();
         showNotification('Product description generated successfully!', 'success');
         return result.description;
     } catch (error) {
         console.error('Error generating description:', error);
-        showNotification('Error generating product description', 'error');
-        return null;
+        return await generateProductDescriptionFallback(productData);
     }
 };
+
+// Fallback description generation
+async function generateProductDescriptionFallback(productData) {
+    const prompt = `Create an Etsy product description for:
+Product: ${productData.name}
+Type: ${productData.type}
+Keywords: ${productData.keywords?.join(', ') || 'not specified'}
+Target Audience: ${productData.audience || 'general audience'}
+Style: ${productData.style || 'professional'}
+
+Please create a compelling description that includes:
+- Engaging opening paragraph
+- Key features and benefits
+- Materials and specifications
+- Usage suggestions
+- Care instructions (if applicable)
+- Emotional appeal
+- Call to action for purchase
+
+Format the response in clear paragraphs.`;
+    
+    try {
+        return await window.sendAIChatMessage(prompt);
+    } catch (error) {
+        console.error('Fallback description failed:', error);
+        return `This beautifully crafted ${productData.name} is perfect for ${productData.audience || 'your customers'}. Made with attention to detail and quality materials, this ${productData.type} will delight your customers. Features include ${productData.keywords?.join(', ') || 'excellent craftsmanship'}. Perfect as a gift or for personal use.`;
+    }
+}
 
 window.generateProductTitle = async function(productData) {
     try {
         showNotification('Generating product title...', 'info');
         
+        const activeProvider = await getActiveAIProvider();
         const { data: { session } } = await supabase.auth.getSession();
+        
         const response = await fetch('/api/generate-title', {
             method: 'POST',
             headers: {
@@ -50,27 +140,68 @@ window.generateProductTitle = async function(productData) {
                 productType: productData.type,
                 keywords: productData.keywords,
                 style: productData.style || 'catchy',
-                characterLimit: productData.characterLimit || 60
+                characterLimit: productData.characterLimit || 60,
+                aiProvider: activeProvider.provider,
+                apiKey: activeProvider.key,
+                model: activeProvider.model,
+                temperature: activeProvider.temperature
             })
         });
 
-        if (!response.ok) throw new Error('Title generation failed');
+        if (!response.ok) {
+            // Fallback: Direkt AI chat kullan
+            return await generateProductTitleFallback(productData);
+        }
         
         const result = await response.json();
         showNotification('Product title generated successfully!', 'success');
-        return result.titles; // Array of title options
+        return result.titles;
     } catch (error) {
         console.error('Error generating title:', error);
-        showNotification('Error generating product title', 'error');
-        return null;
+        return await generateProductTitleFallback(productData);
     }
 };
+
+async function generateProductTitleFallback(productData) {
+    const prompt = `Generate ${productData.numTitles || 5} product title options for an Etsy listing:
+Product Type: ${productData.type}
+Keywords: ${productData.keywords?.join(', ') || 'handmade, unique, quality'}
+Style: ${productData.style || 'catchy'}
+Character Limit: ${productData.characterLimit || 60}
+
+Requirements:
+- Include main keywords
+- Be attention-grabbing
+- Optimized for Etsy search
+- Include emotional triggers
+- Clear and descriptive
+
+Return as a JSON array of titles.`;
+    
+    try {
+        const response = await window.sendAIChatMessage(prompt);
+        // Parse the response to extract titles
+        const titles = response.split('\n').filter(line => line.trim().length > 0);
+        return titles.slice(0, productData.numTitles || 5);
+    } catch (error) {
+        console.error('Fallback title failed:', error);
+        return [
+            `Beautiful ${productData.type} - Handmade with Love`,
+            `Premium ${productData.type} - Unique Design`,
+            `${productData.type} Gift - Perfect Present`,
+            `Custom ${productData.type} - Made to Order`,
+            `${productData.type} - ${productData.keywords?.[0] || 'Quality'} Craftsmanship`
+        ];
+    }
+}
 
 window.generateSEOTags = async function(productData) {
     try {
         showNotification('Generating SEO tags and metadata...', 'info');
         
+        const activeProvider = await getActiveAIProvider();
         const { data: { session } } = await supabase.auth.getSession();
+        
         const response = await fetch('/api/generate-seo-tags', {
             method: 'POST',
             headers: {
@@ -82,11 +213,18 @@ window.generateSEOTags = async function(productData) {
                 productType: productData.type,
                 keywords: productData.keywords,
                 description: productData.description,
-                targetPlatform: productData.platform || 'etsy'
+                targetPlatform: productData.platform || 'etsy',
+                aiProvider: activeProvider.provider,
+                apiKey: activeProvider.key,
+                model: activeProvider.model,
+                temperature: activeProvider.temperature
             })
         });
 
-        if (!response.ok) throw new Error('SEO generation failed');
+        if (!response.ok) {
+            // Fallback: Direkt AI chat kullan
+            return await generateSEOTagsFallback(productData);
+        }
         
         const result = await response.json();
         showNotification('SEO tags generated successfully!', 'success');
@@ -97,16 +235,78 @@ window.generateSEOTags = async function(productData) {
         };
     } catch (error) {
         console.error('Error generating SEO tags:', error);
-        showNotification('Error generating SEO tags', 'error');
-        return null;
+        return await generateSEOTagsFallback(productData);
     }
 };
+
+async function generateSEOTagsFallback(productData) {
+    const prompt = `Generate SEO-optimized tags and metadata for Etsy listing:
+Product: ${productData.name}
+Type: ${productData.type}
+Category: ${productData.category || 'Handmade'}
+Materials: ${productData.materials || 'not specified'}
+Style: ${productData.style || 'various'}
+Description: ${productData.description?.substring(0, 200) || 'not provided'}
+
+Provide:
+1. Meta description (150-160 characters)
+2. Primary keywords (3-5)
+3. Long-tail keywords (5-7)
+4. Product tags (13 max for Etsy)
+5. Suggested categories
+
+Format response as JSON.`;
+    
+    try {
+        const response = await window.sendAIChatMessage(prompt);
+        // Parse JSON response
+        try {
+            const parsed = JSON.parse(response);
+            return {
+                metaDescription: parsed.metaDescription || `Beautiful ${productData.type} - ${productData.name}. Handmade with quality materials. Perfect gift.`,
+                tags: parsed.tags || generateDefaultTags(productData),
+                categories: parsed.categories || [`${productData.type}s`, 'Handmade', 'Gifts']
+            };
+        } catch (e) {
+            return {
+                metaDescription: `Beautiful ${productData.type} - ${productData.name}. Handmade with quality materials. Perfect gift.`,
+                tags: generateDefaultTags(productData),
+                categories: [`${productData.type}s`, 'Handmade', 'Gifts']
+            };
+        }
+    } catch (error) {
+        console.error('Fallback SEO failed:', error);
+        return {
+            metaDescription: `Beautiful ${productData.type} - ${productData.name}. Handmade with quality materials. Perfect gift.`,
+            tags: generateDefaultTags(productData),
+            categories: [`${productData.type}s`, 'Handmade', 'Gifts']
+        };
+    }
+}
+
+function generateDefaultTags(productData) {
+    const baseTags = [
+        productData.name.toLowerCase(),
+        productData.type.toLowerCase(),
+        'handmade',
+        'etsy',
+        'gift'
+    ];
+    
+    if (productData.keywords) {
+        baseTags.push(...productData.keywords.slice(0, 8));
+    }
+    
+    return baseTags.slice(0, 13);
+}
 
 window.generateProductTags = async function(productData) {
     try {
         showNotification('Generating product tags...', 'info');
         
+        const activeProvider = await getActiveAIProvider();
         const { data: { session } } = await supabase.auth.getSession();
+        
         const response = await fetch('/api/generate-tags', {
             method: 'POST',
             headers: {
@@ -119,19 +319,53 @@ window.generateProductTags = async function(productData) {
                 category: productData.category,
                 style: productData.style,
                 materials: productData.materials,
-                maxTags: productData.maxTags || 13
+                maxTags: productData.maxTags || 13,
+                aiProvider: activeProvider.provider,
+                apiKey: activeProvider.key,
+                model: activeProvider.model,
+                temperature: activeProvider.temperature
             })
         });
 
-        if (!response.ok) throw new Error('Tags generation failed');
+        if (!response.ok) {
+            // Fallback: Direkt AI chat kullan
+            return await generateProductTagsFallback(productData);
+        }
         
         const result = await response.json();
         showNotification('Product tags generated successfully!', 'success');
         return result.tags;
     } catch (error) {
         console.error('Error generating product tags:', error);
-        showNotification('Error generating product tags', 'error');
-        return null;
+        return await generateProductTagsFallback(productData);
+    }
+};
+
+async function generateProductTagsFallback(productData) {
+    const prompt = `Generate ${productData.maxTags || 13} product tags for Etsy listing:
+Product: ${productData.name}
+Type: ${productData.type}
+Category: ${productData.category || 'Handmade'}
+Style: ${productData.style || 'various'}
+Materials: ${productData.materials || 'not specified'}
+
+Requirements:
+- Include product type
+- Include materials if specified
+- Include style
+- Include use cases
+- Include target audience
+- Include season/occasion if relevant
+- Maximum 13 tags for Etsy
+
+Return as comma-separated list.`;
+    
+    try {
+        const response = await window.sendAIChatMessage(prompt);
+        return response.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    } catch (error) {
+        console.error('Fallback tags failed:', error);
+        return generateDefaultTags(productData);
     }
 };
 
@@ -139,6 +373,8 @@ window.generateProductTags = async function(productData) {
 window.generateProductDesign = async function(designPrompt, style = 'modern', colors = [], dimensions = '1000x1000') {
     try {
         showNotification('Generating product design...', 'info');
+        
+        const activeProvider = await getActiveAIProvider();
         
         // Show design generation progress
         const progressHTML = `
@@ -166,7 +402,9 @@ window.generateProductDesign = async function(designPrompt, style = 'modern', co
                 style: style,
                 colorPalette: colors,
                 dimensions: dimensions,
-                aspectRatio: '1:1'
+                aspectRatio: '1:1',
+                aiProvider: activeProvider.provider,
+                apiKey: activeProvider.key
             })
         });
 
@@ -195,7 +433,9 @@ window.generateDesignVariations = async function(baseDesign, variations = 4) {
     try {
         showNotification(`Generating ${variations} design variations...`, 'info');
         
+        const activeProvider = await getActiveAIProvider();
         const { data: { session } } = await supabase.auth.getSession();
+        
         const response = await fetch('/api/generate-design-variations', {
             method: 'POST',
             headers: {
@@ -205,7 +445,9 @@ window.generateDesignVariations = async function(baseDesign, variations = 4) {
             body: JSON.stringify({
                 baseDesign: baseDesign,
                 variations: variations,
-                styles: ['minimal', 'vintage', 'modern', 'abstract']
+                styles: ['minimal', 'vintage', 'modern', 'abstract'],
+                aiProvider: activeProvider.provider,
+                apiKey: activeProvider.key
             })
         });
 
@@ -226,7 +468,9 @@ window.recommendPrice = async function(productData, marketData = {}) {
     try {
         showNotification('Analyzing market for price recommendation...', 'info');
         
+        const activeProvider = await getActiveAIProvider();
         const { data: { session } } = await supabase.auth.getSession();
+        
         const response = await fetch('/api/recommend-price', {
             method: 'POST',
             headers: {
@@ -238,11 +482,18 @@ window.recommendPrice = async function(productData, marketData = {}) {
                 productType: productData.type,
                 competitionPrices: marketData.competition || [],
                 targetMargin: marketData.margin || 0.4,
-                platform: marketData.platform || 'etsy'
+                platform: marketData.platform || 'etsy',
+                aiProvider: activeProvider.provider,
+                apiKey: activeProvider.key,
+                model: activeProvider.model,
+                temperature: activeProvider.temperature
             })
         });
 
-        if (!response.ok) throw new Error('Price recommendation failed');
+        if (!response.ok) {
+            // Fallback: Basit hesaplama
+            return calculateBasicPrice(productData, marketData);
+        }
         
         const result = await response.json();
         showNotification('Price recommendation generated!', 'success');
@@ -255,10 +506,23 @@ window.recommendPrice = async function(productData, marketData = {}) {
         };
     } catch (error) {
         console.error('Error generating price recommendation:', error);
-        showNotification('Error generating price recommendation', 'error');
-        return null;
+        return calculateBasicPrice(productData, marketData);
     }
 };
+
+function calculateBasicPrice(productData, marketData) {
+    const baseCost = productData.cost || 10;
+    const margin = marketData.margin || 0.4;
+    const recommended = baseCost * (1 + margin);
+    
+    return {
+        recommendedPrice: Math.round(recommended * 100) / 100,
+        minPrice: Math.round((baseCost * 1.2) * 100) / 100,
+        maxPrice: Math.round((baseCost * 2) * 100) / 100,
+        profitMargin: margin,
+        competitionAnalysis: 'Using basic calculation method'
+    };
+}
 
 window.analyzeProductPerformance = async function(productId) {
     try {
@@ -287,7 +551,9 @@ window.analyzeProductPerformance = async function(productId) {
             .select('views, clicks, conversions')
             .eq('product_id', productId);
 
+        const activeProvider = await getActiveAIProvider();
         const { data: { session } } = await supabase.auth.getSession();
+        
         const response = await fetch('/api/analyze-performance', {
             method: 'POST',
             headers: {
@@ -298,7 +564,11 @@ window.analyzeProductPerformance = async function(productId) {
                 productData: productData,
                 salesData: salesData || [],
                 viewData: viewData || [],
-                timePeriod: '30d'
+                timePeriod: '30d',
+                aiProvider: activeProvider.provider,
+                apiKey: activeProvider.key,
+                model: activeProvider.model,
+                temperature: activeProvider.temperature
             })
         });
 
@@ -319,7 +589,9 @@ window.optimizeProductListing = async function(productData) {
     try {
         showNotification('Optimizing product listing...', 'info');
         
+        const activeProvider = await getActiveAIProvider();
         const { data: { session } } = await supabase.auth.getSession();
+        
         const response = await fetch('/api/optimize-listing', {
             method: 'POST',
             headers: {
@@ -331,11 +603,18 @@ window.optimizeProductListing = async function(productData) {
                 description: productData.description,
                 tags: productData.tags,
                 category: productData.category,
-                platform: productData.platform || 'etsy'
+                platform: productData.platform || 'etsy',
+                aiProvider: activeProvider.provider,
+                apiKey: activeProvider.key,
+                model: activeProvider.model,
+                temperature: activeProvider.temperature
             })
         });
 
-        if (!response.ok) throw new Error('Listing optimization failed');
+        if (!response.ok) {
+            // Fallback: Basit optimizasyon
+            return basicListingOptimization(productData);
+        }
         
         const result = await response.json();
         showNotification('Listing optimization completed!', 'success');
@@ -348,16 +627,34 @@ window.optimizeProductListing = async function(productData) {
         };
     } catch (error) {
         console.error('Error optimizing product listing:', error);
-        showNotification('Error optimizing product listing', 'error');
-        return null;
+        return basicListingOptimization(productData);
     }
 };
+
+function basicListingOptimization(productData) {
+    const title = productData.title || 'Product Listing';
+    const optimizedTitle = title.length > 60 ? title.substring(0, 57) + '...' : title;
+    
+    return {
+        optimizedTitle: optimizedTitle,
+        optimizedDescription: productData.description || 'No description provided',
+        suggestedTags: productData.tags || [],
+        seoScore: 65,
+        improvements: [
+            'Consider adding more keywords to title',
+            'Increase description length',
+            'Use all 13 available tags'
+        ]
+    };
+}
 
 window.generateMarketingCopy = async function(productData, platform = 'etsy') {
     try {
         showNotification('Generating marketing copy...', 'info');
         
+        const activeProvider = await getActiveAIProvider();
         const { data: { session } } = await supabase.auth.getSession();
+        
         const response = await fetch('/api/generate-marketing-copy', {
             method: 'POST',
             headers: {
@@ -369,7 +666,11 @@ window.generateMarketingCopy = async function(productData, platform = 'etsy') {
                 productDescription: productData.description,
                 targetAudience: productData.audience,
                 platform: platform,
-                tone: productData.tone || 'enthusiastic'
+                tone: productData.tone || 'enthusiastic',
+                aiProvider: activeProvider.provider,
+                apiKey: activeProvider.key,
+                model: activeProvider.model,
+                temperature: activeProvider.temperature
             })
         });
 
@@ -394,7 +695,9 @@ window.bulkGenerateDescriptions = async function(products) {
     try {
         showNotification(`Generating descriptions for ${products.length} products...`, 'info');
         
+        const activeProvider = await getActiveAIProvider();
         const { data: { session } } = await supabase.auth.getSession();
+        
         const response = await fetch('/api/bulk-generate-descriptions', {
             method: 'POST',
             headers: {
@@ -403,7 +706,11 @@ window.bulkGenerateDescriptions = async function(products) {
             },
             body: JSON.stringify({
                 products: products,
-                batchSize: 5
+                batchSize: 5,
+                aiProvider: activeProvider.provider,
+                apiKey: activeProvider.key,
+                model: activeProvider.model,
+                temperature: activeProvider.temperature
             })
         });
 
@@ -420,13 +727,13 @@ window.bulkGenerateDescriptions = async function(products) {
 };
 
 // ===== AI CHAT ASSISTANT =====
-// ai.js - Düzeltilmiş sendAIChatMessage fonksiyonu
-// ai.js - Gerçek AI API bağlantılı
 window.sendAIChatMessage = async function(message, conversationHistory = []) {
     try {
         console.log('💬 Sending to AI API:', message);
         
+        const activeProvider = await getActiveAIProvider();
         const { data: { session } } = await supabase.auth.getSession();
+        
         if (!session) {
             throw new Error('No authentication session');
         }
@@ -440,7 +747,11 @@ window.sendAIChatMessage = async function(message, conversationHistory = []) {
             body: JSON.stringify({
                 message: message,
                 history: conversationHistory,
-                context: 'etsy_business'
+                context: 'etsy_business',
+                aiProvider: activeProvider.provider,
+                apiKey: activeProvider.key,
+                model: activeProvider.model,
+                temperature: activeProvider.temperature
             })
         });
 
@@ -455,7 +766,8 @@ window.sendAIChatMessage = async function(message, conversationHistory = []) {
         
     } catch (error) {
         console.error('❌ AI Chat Error:', error);
-        throw new Error('Unable to connect to AI services. Please check your API keys and try again.');
+        // Fallback response
+        return generateFallbackResponse(message, conversationHistory);
     }
 };
 
@@ -464,8 +776,8 @@ window.generateProductDescriptionAI = async function(productData) {
     const prompt = `Create an Etsy product description for:
 Product: ${productData.name}
 Type: ${productData.type}
-Keywords: ${productData.keywords?.join(', ')}
-Target Audience: ${productData.audience}
+Keywords: ${productData.keywords?.join(', ') || 'not specified'}
+Target Audience: ${productData.audience || 'general audience'}
 
 Please create a compelling description that includes:
 - Engaging opening
@@ -473,7 +785,9 @@ Please create a compelling description that includes:
 - Technical specifications
 - Usage suggestions
 - Emotional appeal
-- Call to action`;
+- Call to action
+
+Format in clear paragraphs.`;
 
     return await window.sendAIChatMessage(prompt);
 };
@@ -481,31 +795,46 @@ Please create a compelling description that includes:
 window.generateSEOTagsAI = async function(productData) {
     const prompt = `Generate SEO-optimized tags and metadata for Etsy:
 Product: ${productData.name}
-Category: ${productData.category}
-Materials: ${productData.materials}
-Style: ${productData.style}
+Category: ${productData.category || 'Handmade'}
+Materials: ${productData.materials || 'various'}
+Style: ${productData.style || 'traditional'}
 
 Provide:
 1. Primary keywords (3-5)
 2. Long-tail keywords (5-7)
-3. Meta description
-4. Product tags (13 max for Etsy)`;
+3. Meta description (150-160 chars)
+4. Product tags (13 max for Etsy)
 
-    return await window.sendAIChatMessage(prompt);
+Format as JSON.`;
+
+    const response = await window.sendAIChatMessage(prompt);
+    
+    try {
+        return JSON.parse(response);
+    } catch (e) {
+        return {
+            primaryKeywords: [productData.name, productData.type, 'handmade'],
+            longTailKeywords: [`${productData.name} ${productData.type}`, 'handmade gift', 'etsy shop'],
+            metaDescription: `Beautiful ${productData.name} - handmade ${productData.type}. Perfect gift.`,
+            tags: generateDefaultTags(productData)
+        };
+    }
 };
 
 window.analyzeSalesAI = async function(salesData) {
     const prompt = `Analyze this Etsy sales data and provide insights:
-Total Sales: ${salesData.totalSales}
-Conversion Rate: ${salesData.conversionRate}%
-Average Order Value: $${salesData.averageOrderValue}
-Top Products: ${salesData.topProducts?.join(', ')}
+Total Sales: ${salesData.totalSales || 0}
+Conversion Rate: ${salesData.conversionRate || 0}%
+Average Order Value: $${salesData.averageOrderValue || 0}
+Top Products: ${salesData.topProducts?.join(', ') || 'none'}
 
 Provide:
 - Performance analysis
 - Growth opportunities
 - Recommendations for improvement
-- Seasonal trends if visible`;
+- Seasonal trends if visible
+
+Format as bullet points.`;
 
     return await window.sendAIChatMessage(prompt);
 };
@@ -514,42 +843,34 @@ Provide:
 function generateFallbackResponse(message, history) {
     const lowerMessage = message.toLowerCase();
     
-    // Ürün açıklama istekleri
     if (lowerMessage.includes('description') || lowerMessage.includes('describe') || lowerMessage.includes('product')) {
         return "I'd be happy to help you create a product description! For a compelling Etsy listing, focus on:\n\n• The unique features of your product\n• Materials and craftsmanship\n• Size and specifications\n• How it benefits the customer\n• What makes it special\n\nCould you tell me more about the product you'd like to describe?";
     }
     
-    // SEO istekleri
     if (lowerMessage.includes('seo') || lowerMessage.includes('tag') || lowerMessage.includes('keyword')) {
         return "Great! For Etsy SEO optimization, consider these strategies:\n\n• Use all 13 tags effectively\n• Include long-tail keywords\n• Mention product attributes (color, size, material)\n• Use seasonal and occasion keywords\n• Research competitor tags\n\nWhat type of product are you optimizing?";
     }
     
-    // Fiyat istekleri
     if (lowerMessage.includes('price') || lowerMessage.includes('cost') || lowerMessage.includes('how much')) {
         return "For pricing your Etsy products, consider:\n\n• Material costs × 2-3\n• Labor time × your hourly rate\n• Etsy fees (5% + payment processing)\n• Shipping and packaging\n• Desired profit margin\n• Competitor pricing\n\nA good starting point is materials × 3 + labor + fees.";
     }
     
-    // Satış analizi
     if (lowerMessage.includes('sales') || lowerMessage.includes('analyze') || lowerMessage.includes('performance')) {
         return "To analyze your sales performance:\n\n• Track conversion rates\n• Monitor listing views and favorites\n• Analyze seasonal trends\n• Review customer reviews\n• Check competitor performance\n• Optimize based on data\n\nWould you like me to help analyze specific metrics?";
     }
     
-    // Tasarım istekleri
     if (lowerMessage.includes('design') || lowerMessage.includes('create') || lowerMessage.includes('mockup')) {
         return "For product design inspiration:\n\n• Research trending designs on Etsy\n• Consider your target audience\n• Use color psychology\n• Create multiple variations\n• Test different styles\n• Get customer feedback\n\nWhat type of design are you working on?";
     }
     
-    // Genel Etsy tavsiyeleri
     if (lowerMessage.includes('etsy') || lowerMessage.includes('shop') || lowerMessage.includes('store')) {
         return "For Etsy shop success:\n\n• Use high-quality photos (5+ per listing)\n• Write detailed descriptions\n• Offer excellent customer service\n• Use all available tags\n• Update listings regularly\n• Promote on social media\n• Consider Etsy Ads for top listings\n\nWhat specific aspect of your Etsy shop would you like to improve?";
     }
     
-    // Selamlama
     if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
         return "Hello! I'm your Etsy AI Assistant. I can help you with:\n\n• Product descriptions and SEO\n• Pricing strategies\n• Sales analysis\n• Design inspiration\n• Marketing tips\n• Customer service templates\n\nWhat would you like help with today?";
     }
     
-    // Varsayılan yanıt
     return "I'm here to help with your Etsy business! I can assist with:\n\n📝 Product descriptions and listings\n🔍 SEO optimization and tags\n💰 Pricing strategies\n📈 Sales analysis and insights\n🎨 Design inspiration\n📱 Marketing and social media\n\nWhat specific area would you like to focus on?";
 }
 
@@ -565,6 +886,7 @@ window.quickGenerateSEO = async function() {
 window.quickAnalyzePerformance = async function() {
     return "To analyze your sales performance:\n\n• Track conversion rates\n• Monitor listing views and favorites\n• Analyze seasonal trends\n• Review customer reviews\n• Check competitor performance\n• Optimize based on data\n\nWould you like me to help analyze specific metrics?";
 };
+
 // ===== HELPER FUNCTIONS =====
 async function getSalesData(productId) {
     const { data, error } = await supabase
@@ -590,9 +912,21 @@ async function getViewData(productId) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🤖 AI Assistant initialized with all features');
     
+    // Check AI provider status
+    checkAIProviderStatus();
+    
     // Initialize AI action buttons
     initializeAIActions();
 });
+
+async function checkAIProviderStatus() {
+    const provider = await getActiveAIProvider();
+    console.log('🤖 Active AI Provider:', provider.provider);
+    
+    if (!provider.key) {
+        console.warn('⚠️ No API key configured for active provider');
+    }
+}
 
 function initializeAIActions() {
     // Product page AI buttons
@@ -677,23 +1011,27 @@ function getProductDataFromPage() {
         category: document.getElementById('product-category')?.value || '',
         description: document.getElementById('product-description')?.value || '',
         keywords: document.getElementById('product-keywords')?.value?.split(',') || [],
-        cost: parseFloat(document.getElementById('product-cost')?.value) || 0
+        cost: parseFloat(document.getElementById('product-cost')?.value) || 0,
+        materials: document.getElementById('product-materials')?.value || '',
+        style: document.getElementById('product-style')?.value || '',
+        audience: document.getElementById('product-audience')?.value || ''
     };
 }
 
 // Modal functions for AI results
 function showTitleSelectionModal(titles) {
     const modalHTML = `
-        <div class="modal-overlay">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Select a Title</h3>
-                    <button class="modal-close" onclick="closeModal()">&times;</button>
+        <div class="modal-overlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+            <div class="modal-content" style="background: white; border-radius: 12px; padding: 0; min-width: 400px; max-width: 500px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+                <div class="modal-header" style="padding: 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 class="modal-title" style="font-size: 1.25rem; font-weight: 600; color: #111827; margin: 0;">Select a Title</h3>
+                    <button class="modal-close" onclick="window.closeModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280;">&times;</button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" style="padding: 1.5rem; max-height: 400px; overflow-y: auto;">
                     ${titles.map((title, index) => `
-                        <div class="ai-option" onclick="selectTitle('${title}')">
-                            ${title}
+                        <div class="ai-option" onclick="window.selectTitle('${title.replace(/'/g, "\\'")}')" style="padding: 1rem; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 0.75rem; cursor: pointer; transition: all 0.3s ease;">
+                            <div style="font-weight: 500; margin-bottom: 0.25rem;">${title}</div>
+                            <div style="font-size: 0.75rem; color: #6b7280;">${title.length} characters</div>
                         </div>
                     `).join('')}
                 </div>
@@ -705,21 +1043,41 @@ function showTitleSelectionModal(titles) {
 
 function showSEOModal(seoData) {
     const modalHTML = `
-        <div class="modal-overlay">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>SEO Recommendations</h3>
-                    <button class="modal-close" onclick="closeModal()">&times;</button>
+        <div class="modal-overlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+            <div class="modal-content" style="background: white; border-radius: 12px; padding: 0; min-width: 500px; max-width: 600px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+                <div class="modal-header" style="padding: 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 class="modal-title" style="font-size: 1.25rem; font-weight: 600; color: #111827; margin: 0;">SEO Recommendations</h3>
+                    <button class="modal-close" onclick="window.closeModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280;">&times;</button>
                 </div>
-                <div class="modal-body">
-                    <div class="seo-section">
-                        <h4>Meta Description</h4>
-                        <p>${seoData.metaDescription}</p>
+                <div class="modal-body" style="padding: 1.5rem; max-height: 500px; overflow-y: auto;">
+                    <div class="seo-section" style="margin-bottom: 1.5rem;">
+                        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Meta Description</h4>
+                        <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e5e7eb;">
+                            <p style="margin: 0; font-size: 0.875rem; color: #4b5563;">${seoData.metaDescription}</p>
+                        </div>
+                        <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.5rem;">
+                            ${seoData.metaDescription.length} characters (optimal: 150-160)
+                        </div>
+                    </div>
+                    <div class="seo-section" style="margin-bottom: 1.5rem;">
+                        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Tags (${seoData.tags.length}/13)</h4>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            ${seoData.tags.map(tag => `
+                                <span style="background: #f3f4f6; padding: 0.375rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; color: #374151;">${tag}</span>
+                            `).join('')}
+                        </div>
                     </div>
                     <div class="seo-section">
-                        <h4>Tags</h4>
-                        <p>${seoData.tags.join(', ')}</p>
+                        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Categories</h4>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            ${seoData.categories.map(cat => `
+                                <span style="background: #fef3c7; padding: 0.375rem 0.75rem; border-radius: 6px; font-size: 0.875rem; color: #92400e;">${cat}</span>
+                            `).join('')}
+                        </div>
                     </div>
+                </div>
+                <div class="modal-footer" style="padding: 1.5rem; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end;">
+                    <button class="settings-btn settings-btn-primary" onclick="window.closeModal()">Close</button>
                 </div>
             </div>
         </div>
@@ -736,14 +1094,22 @@ function showModal(html) {
 
 window.closeModal = function() {
     const modals = document.querySelectorAll('.modal-overlay');
-    modals.forEach(modal => modal.remove());
+    modals.forEach(modal => {
+        if (modal.parentNode) {
+            modal.parentNode.removeChild(modal);
+        }
+    });
 };
 
 window.selectTitle = function(title) {
-    document.getElementById('product-name').value = title;
-    closeModal();
+    const titleInput = document.getElementById('product-name');
+    if (titleInput) {
+        titleInput.value = title;
+    }
+    window.closeModal();
 };
 
+// Global export
 console.log('✅ AI Assistant loaded with all features:');
 console.log('   - Product Content Generation');
 console.log('   - Design Generation');
@@ -751,6 +1117,25 @@ console.log('   - Price Intelligence');
 console.log('   - SEO Optimization');
 console.log('   - Marketing Copy');
 console.log('   - Bulk Operations');
-console.log('   - Chat Assistant');
+console.log('   - Chat Assistant with AI Provider integration');
 
-
+export {
+    generateProductDescription,
+    generateProductTitle,
+    generateSEOTags,
+    generateProductTags,
+    generateProductDesign,
+    generateDesignVariations,
+    recommendPrice,
+    analyzeProductPerformance,
+    optimizeProductListing,
+    generateMarketingCopy,
+    bulkGenerateDescriptions,
+    sendAIChatMessage,
+    generateProductDescriptionAI,
+    generateSEOTagsAI,
+    analyzeSalesAI,
+    quickGenerateDescription,
+    quickGenerateSEO,
+    quickAnalyzePerformance
+};
