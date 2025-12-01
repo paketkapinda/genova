@@ -2,7 +2,8 @@
   "version": 2,
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/frontend/(.*)", "dest": "/frontend/$1" },
+    { "source": "/api/(.*)", "destination": "/api/$1" },
     { "src": "/", "dest": "/public/index.html" }
   ]
 }
+
