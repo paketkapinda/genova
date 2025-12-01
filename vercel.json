@@ -1,24 +1,30 @@
 {
   "version": 2,
-  "routes": [
-    { 
-      "src": "/api/ai/(.*)", 
-      "dest": "/api/ai/$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With"
-      }
+  "builds": [
+    {
+      "src": "api/ai/*.js",
+      "use": "@vercel/node"
     },
-    { 
-      "src": "/(.*)", 
-      "dest": "/public/$1" 
+    {
+      "src": "public/**/*",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1",
+      "continue": true
     }
   ],
   "functions": {
     "api/ai/generate.js": {
-      "maxDuration": 30,
-      "memory": 1024
+      "memory": 1024,
+      "maxDuration": 30
     }
   }
 }
