@@ -1,30 +1,8 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/ai/*.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "public/**/*",
-      "use": "@vercel/static"
-    }
-  ],
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1",
-      "continue": true
-    }
-  ],
-  "functions": {
-    "api/ai/generate.js": {
-      "memory": 1024,
-      "maxDuration": 30
-    }
-  }
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/frontend/(.*)", "dest": "/frontend/$1" },
+    { "src": "/", "dest": "/public/index.html" }
+  ]
 }

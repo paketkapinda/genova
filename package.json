@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "description": "Extended Etsy AI POD platform with Supabase backend",
   "scripts": {
-    "dev": "vercel dev",
-    "deploy": "vercel --prod",
+    "dev": "supabase functions serve --env-file .env.local",
+    "deploy": "supabase functions deploy",
+    "migrate": "supabase db push",
+    "migrate:reset": "supabase db reset",
     "lint": "echo 'No linting configured for vanilla JS'",
     "test": "echo 'No tests configured'"
   },
@@ -17,13 +19,9 @@
   ],
   "author": "",
   "license": "MIT",
-  "dependencies": {
-    "@supabase/supabase-js": "^2.48.0"
-  },
   "devDependencies": {
-    "@vercel/node": "^3.1.12"
-  },
-  "engines": {
-    "node": "18.x"
+    "supabase": "^1.0.0"
   }
 }
+
+
