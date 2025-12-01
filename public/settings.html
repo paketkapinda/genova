@@ -585,7 +585,7 @@
             </button>
           </div>
 
-          <!-- Payment Settings -->
+          <!-- Payment Settings - MODAL OLAN VERSİYON -->
           <div class="settings-card">
             <div class="settings-card-header">
               <div class="settings-card-icon">
@@ -599,65 +599,22 @@
               </div>
             </div>
             
-            <form id="form-payment" class="settings-form">
-              <div class="settings-form-group">
-                <label class="settings-form-label">Wise API Key</label>
-                <input
-                  type="password"
-                  id="wise-api-key"
-                  placeholder="Enter Wise API key"
-                  class="settings-form-input"
-                />
+            <div class="settings-list">
+              <div class="settings-empty-state">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                </svg>
+                <div class="settings-empty-state-title">Payment settings not configured</div>
+                <div class="settings-empty-state-description">Click the button below to configure payment settings</div>
               </div>
-              <div class="settings-form-group">
-                <label class="settings-form-label">Payoneer API Key</label>
-                <input
-                  type="password"
-                  id="payoneer-api-key"
-                  placeholder="Enter Payoneer API key"
-                  class="settings-form-input"
-                />
-              </div>
-              <div class="settings-form-group">
-                <label class="settings-form-label">Bank Name</label>
-                <input
-                  type="text"
-                  id="bank-name"
-                  placeholder="Enter bank name"
-                  class="settings-form-input"
-                />
-              </div>
-              <div class="settings-form-group">
-                <label class="settings-form-label">IBAN</label>
-                <input
-                  type="text"
-                  id="iban"
-                  placeholder="Enter IBAN"
-                  class="settings-form-input"
-                />
-              </div>
-              <div class="settings-form-group">
-                <label class="settings-form-label">Swift Code</label>
-                <input
-                  type="text"
-                  id="swift-code"
-                  placeholder="Enter SWIFT code"
-                  class="settings-form-input"
-                />
-              </div>
-              <div class="settings-form-group">
-                <label class="settings-form-label">Account Holder Name</label>
-                <input
-                  type="text"
-                  id="account-holder"
-                  placeholder="Enter account holder name"
-                  class="settings-form-input"
-                />
-              </div>
-              <button type="submit" class="settings-btn settings-btn-primary">
-                Save Payment Settings
-              </button>
-            </form>
+            </div>
+            
+            <button id="btn-payment-settings" class="settings-btn settings-btn-outline">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              Configure Payment Settings
+            </button>
           </div>
 
           <!-- Team Members -->
@@ -693,7 +650,7 @@
             </button>
           </div>
 
-         <!-- AI Design Tools -->
+         <!-- AI Design Tools - MODAL OLAN VERSİYON -->
 <div class="settings-card">
   <div class="settings-card-header">
     <div class="settings-card-icon">
@@ -719,133 +676,73 @@
         </button>
       </div>
     </div>
+    
+    <div class="settings-list-item">
+      <div class="settings-list-item-info">
+        <div class="settings-list-item-name">AI Design Tools</div>
+        <div class="settings-list-item-desc">Configure visual design AI tools</div>
+      </div>
+      <div class="settings-list-item-actions">
+        <button id="btn-manage-design-tools" class="settings-btn settings-btn-outline">
+          Manage
+        </button>
+      </div>
+    </div>
+    
+    <div class="settings-list-item">
+      <div class="settings-list-item-info">
+        <div class="settings-list-item-name">AI Content Tools</div>
+        <div class="settings-list-item-desc">Configure content creation AI tools</div>
+      </div>
+      <div class="settings-list-item-actions">
+        <button id="btn-manage-content-tools" class="settings-btn settings-btn-outline">
+          Manage
+        </button>
+      </div>
+    </div>
   </div>
-  
-  <form id="form-ai-keys" class="settings-form">
-    <div class="settings-form-group">
-      <label class="settings-form-label">OpenAI API Key</label>
-      <input
-        type="password"
-        id="openai-api-key"
-        placeholder="Enter OpenAI API key"
-        class="settings-form-input"
-      />
-      <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
-        <input type="checkbox" id="openai-active" style="width: auto;">
-        <label for="openai-active" style="font-size: 0.75rem; color: #6b7280;">Active</label>
-      </div>
-    </div>
-    
-    <div class="settings-form-group">
-      <label class="settings-form-label">OpenRouter API Key</label>
-      <input
-        type="password"
-        id="openrouter-api-key"
-        placeholder="Enter OpenRouter API key"
-        class="settings-form-input"
-      />
-      <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
-        <input type="checkbox" id="openrouter-active" style="width: auto;">
-        <label for="openrouter-active" style="font-size: 0.75rem; color: #6b7280;">Active</label>
-      </div>
-    </div>
-    
-    <div class="settings-form-group">
-      <label class="settings-form-label">Anthropic API Key</label>
-      <input
-        type="password"
-        id="anthropic-api-key"
-        placeholder="Enter Anthropic API key"
-        class="settings-form-input"
-      />
-      <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
-        <input type="checkbox" id="anthropic-active" style="width: auto;">
-        <label for="anthropic-active" style="font-size: 0.75rem; color: #6b7280;">Active</label>
-      </div>
-    </div>
-    
-    <div class="settings-form-group">
-      <label class="settings-form-label">Stability AI API Key</label>
-      <input
-        type="password"
-        id="stability-api-key"
-        placeholder="Enter Stability AI API key"
-        class="settings-form-input"
-      />
-      <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
-        <input type="checkbox" id="stability-active" style="width: auto;">
-        <label for="stability-active" style="font-size: 0.75rem; color: #6b7280;">Active</label>
-      </div>
-    </div>
-    
-    <div class="settings-form-group">
-      <label class="settings-form-label">Midjourney API Key</label>
-      <input
-        type="password"
-        id="midjourney-api-key"
-        placeholder="Enter Midjourney API key"
-        class="settings-form-input"
-      />
-      <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
-        <input type="checkbox" id="midjourney-active" style="width: auto;">
-        <label for="midjourney-active" style="font-size: 0.75rem; color: #6b7280;">Active</label>
-      </div>
-    </div>
-    
-    <div class="settings-form-group">
-      <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <input type="checkbox" id="encrypt-keys" checked style="width: auto;">
-        <label class="settings-form-label" for="encrypt-keys">Encrypt API Keys</label>
-      </div>
-      <p style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">
-        Encrypt your API keys for additional security
-      </p>
-    </div>
-    
-    <div style="display: flex; gap: 0.75rem;">
-      <button type="submit" class="settings-btn settings-btn-primary" style="flex: 1;">
-        Save AI Settings
-      </button>
-      <button type="button" id="btn-ai-tools" class="settings-btn settings-btn-outline">
-        Manage AI Tools
-      </button>
-    </div>
-  </form>
 </div>
         </div>
       </main>
     </div>
 
-    <!-- ÖNEMLİ: Type="module" KALDIRIYORUZ -->
+    <!-- JavaScript - ES6 MODULE DESTEĞİ İLE -->
     <script src="/assets/js/env.js"></script>
-    <!-- Supabase'i global olarak yüklemek için CDN kullanıyoruz -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
-    <script>
-      // Supabase'i global olarak initialize ediyoruz
-      const supabaseUrl = 'https://YOUR_SUPABASE_URL.supabase.co'; // env.js'den gelecek
-      const supabaseKey = 'YOUR_SUPABASE_ANON_KEY'; // env.js'den gelecek
+    <script type="module">
+      // Burada tüm module import'larını yapacağız
+      import { supabase } from '/assets/js/supabaseClient.js';
       
-      // Supabase'i global olarak tanımla
-      window.supabase = supabase.createClient(supabaseUrl, supabaseKey);
-      console.log('✅ Supabase initialized globally');
+      // Supabase'i global olarak tanımla (diğer script'ler için)
+      window.supabase = supabase;
+      console.log('✅ Supabase initialized globally from module');
+      
+      // Diğer modülleri dinamik olarak import et
+      Promise.all([
+        import('/assets/js/auth.js'),
+        import('/assets/js/api.js'),
+        import('/assets/js/ui.js'),
+        import('/assets/js/helpers.js'),
+        import('/assets/js/team.js'),
+        import('/assets/js/etsy.js'),
+        import('/assets/js/producers.js'),
+        import('/assets/js/payment_settings.js'),
+        import('/assets/js/payment.js'),
+        import('/assets/js/ai-tools.js'),
+        import('/assets/js/ai-settings.js')
+      ]).then(() => {
+        console.log('✅ All modules loaded successfully');
+        // Tüm modüller yüklendikten sonra initialization yap
+        if (window.initSettingsPage) {
+          window.initSettingsPage();
+        }
+      }).catch(error => {
+        console.error('❌ Error loading modules:', error);
+      });
     </script>
     
-    <!-- Diğer script'leri module olmadan yüklüyoruz -->
-    <script src="/assets/js/auth.js"></script>
-    <script src="/assets/js/api.js"></script>
-    <script src="/assets/js/ui.js"></script>
-    <script src="/assets/js/helpers.js"></script>
-    <script src="/assets/js/team.js"></script>
-    <script src="/assets/js/etsy.js"></script>
-    <script src="/assets/js/producers.js"></script>
-    <script src="/assets/js/payment_settings.js"></script>
-    <script src="/assets/js/payment.js"></script>
-    <script src="/assets/js/ai-tools.js"></script>
-    <script src="/assets/js/ai-settings.js"></script>
-    
-    <!-- Inline script -->
+    <!-- Inline script - ES6 modüllerden sonra çalışacak -->
     <script>
-    // Global formatDate function for all modules
+    // Global fonksiyonlar
     function formatDate(dateString) {
       if (!dateString) return 'Unknown date';
       const date = new Date(dateString);
@@ -856,7 +753,6 @@
       });
     }
 
-    // Global formatCurrency function
     function formatCurrency(amount) {
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
@@ -864,7 +760,7 @@
       }).format(amount || 0);
     }
 
-    // Notification function
+    // Notification fonksiyonu
     function showNotification(message, type = 'info') {
       // Eğer ui.js'den geliyorsa onu kullan
       if (typeof window.showCustomNotification === 'function') {
@@ -901,7 +797,7 @@
       }, 3000);
     }
 
-    // Add CSS for animations
+    // Animasyon CSS'i ekle
     const style = document.createElement('style');
     style.textContent = `
       @keyframes slideIn {
@@ -915,151 +811,218 @@
     `;
     document.head.appendChild(style);
 
-    // Supabase connection check
-    function waitForSupabase(callback, maxAttempts = 30, interval = 100) {
-      let attempts = 0;
-      
-      function check() {
-        attempts++;
-        console.log(`🔍 Checking supabase (attempt ${attempts}/${maxAttempts})...`);
-        
-        if (typeof window.supabase !== 'undefined' && window.supabase !== null) {
-          console.log('✅ Supabase is ready!');
-          if (callback) callback();
-          return true;
-        }
-        
-        if (attempts >= maxAttempts) {
-          console.error('❌ Supabase failed to load after maximum attempts');
-          showNotification('Failed to connect to database. Please refresh the page.', 'error');
-          return false;
-        }
-        
-        setTimeout(check, interval);
-        return false;
-      }
-      
-      return check();
-    }
-
-    // AI API Keys management
+    // AI Tools yönetimi için fonksiyonlar
     async function loadAIAPIKeys() {
       try {
         console.log('🔑 Loading AI API keys...');
         
-        const { data: { user } } = await supabase.auth.getUser();
+        if (!window.supabase) {
+          console.error('❌ Supabase not available');
+          return;
+        }
+
+        const { data: { user } } = await window.supabase.auth.getUser();
         if (!user) {
-          console.log('👤 No user found');
+          console.log('👤 No user found - user might not be logged in');
           return;
         }
 
         console.log('👤 User ID:', user.id);
 
-        const { data: apiKeys, error } = await supabase
-          .from('ai_api_keys')
+        // ai_tools tablosundan verileri çek
+        const { data: aiTools, error } = await window.supabase
+          .from('ai_tools')
           .select('*')
           .eq('user_id', user.id)
-          .single();
+          .order('created_at', { ascending: false });
 
-        if (error && error.code !== 'PGRST116') {
-          console.error('❌ Error loading API keys:', error);
+        if (error) {
+          console.error('❌ Error loading AI tools:', error);
           throw error;
         }
 
-        if (apiKeys) {
-          console.log('✅ API keys found');
-          document.getElementById('openai-api-key').value = apiKeys.openai_key_encrypted || '';
-          document.getElementById('openrouter-api-key').value = apiKeys.openrouter_key_encrypted || '';
-          document.getElementById('anthropic-api-key').value = apiKeys.anthropic_key_encrypted || '';
-          document.getElementById('stability-api-key').value = apiKeys.stability_key_encrypted || '';
-          document.getElementById('midjourney-api-key').value = apiKeys.midjourney_key_encrypted || '';
-          
-          // Checkboxes'ları ayarla
-          document.getElementById('openai-active').checked = !!apiKeys.openai_key_encrypted;
-          document.getElementById('openrouter-active').checked = !!apiKeys.openrouter_key_encrypted;
-          document.getElementById('anthropic-active').checked = !!apiKeys.anthropic_key_encrypted;
-          document.getElementById('stability-active').checked = !!apiKeys.stability_key_encrypted;
-          document.getElementById('midjourney-active').checked = !!apiKeys.midjourney_key_encrypted;
-          
-          // Update active tools count
-          const activeTools = [
-            apiKeys.openai_key_encrypted ? 'OpenAI' : null,
-            apiKeys.openrouter_key_encrypted ? 'OpenRouter' : null,
-            apiKeys.anthropic_key_encrypted ? 'Anthropic' : null,
-            apiKeys.stability_key_encrypted ? 'Stability AI' : null,
-            apiKeys.midjourney_key_encrypted ? 'Midjourney' : null
-          ].filter(Boolean);
-          
+        console.log('✅ AI Tools loaded:', aiTools);
+        
+        // Aktif tool sayısını güncelle
+        if (aiTools && aiTools.length > 0) {
+          const activeTools = aiTools.filter(tool => tool.is_active);
           const countElement = document.getElementById('active-tools-count');
           if (countElement) {
             countElement.textContent = activeTools.length > 0 
               ? `${activeTools.length} active tool${activeTools.length > 1 ? 's' : ''}` 
               : 'No active AI tools';
           }
-        } else {
-          console.log('📭 No API keys found in database');
         }
+        
+        return aiTools;
       } catch (error) {
-        console.error('❌ Error loading API keys:', error);
-        showNotification('Error loading API keys', 'error');
+        console.error('❌ Error loading AI API keys:', error);
+        showNotification('Error loading AI tools', 'error');
+        return [];
       }
     }
 
-    async function saveAIAPIKeys() {
+    // AI Tool modalını göster
+    function showAIToolModal(toolType = 'design') {
+      const modalHtml = `
+        <div class="modal-overlay">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 class="modal-title">${toolType === 'design' ? 'AI Design Tools' : 'AI Content Tools'}</h3>
+              <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+              <form id="ai-tool-form" class="settings-form">
+                <div class="settings-form-group">
+                  <label class="settings-form-label">Tool Name</label>
+                  <input
+                    type="text"
+                    id="tool-name"
+                    placeholder="Enter tool name (e.g., OpenAI DALL-E)"
+                    class="settings-form-input"
+                    required
+                  />
+                </div>
+                
+                <div class="settings-form-group">
+                  <label class="settings-form-label">Provider</label>
+                  <input
+                    type="text"
+                    id="tool-provider"
+                    placeholder="Enter provider (e.g., OpenAI)"
+                    class="settings-form-input"
+                    required
+                  />
+                </div>
+                
+                <div class="settings-form-group">
+                  <label class="settings-form-label">API Key</label>
+                  <input
+                    type="password"
+                    id="tool-api-key"
+                    placeholder="Enter API key"
+                    class="settings-form-input"
+                    required
+                  />
+                </div>
+                
+                <div class="settings-form-group">
+                  <label class="settings-form-label">Tool Type</label>
+                  <select id="tool-type" class="settings-form-input" required>
+                    <option value="${toolType}" selected>${toolType === 'design' ? 'AI Design' : 'AI Content'}</option>
+                    <option value="${toolType === 'design' ? 'content' : 'design'}">${toolType === 'design' ? 'AI Content' : 'AI Design'}</option>
+                  </select>
+                </div>
+                
+                <div class="settings-form-group">
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="tool-active" checked style="width: auto;">
+                    <label class="settings-form-label" for="tool-active">Active</label>
+                  </div>
+                </div>
+                
+                <div class="settings-form-group">
+                  <label class="settings-form-label">Configuration (JSON)</label>
+                  <textarea
+                    id="tool-config"
+                    placeholder='{"model": "dall-e-3", "size": "1024x1024"}'
+                    class="settings-form-input settings-form-textarea"
+                    rows="4"
+                  ></textarea>
+                  <p style="font-size: 0.75rem; color: #6b7280;">
+                    Optional: Additional configuration in JSON format
+                  </p>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="settings-btn settings-btn-outline" onclick="closeModal()">
+                Cancel
+              </button>
+              <button type="button" class="settings-btn settings-btn-primary" onclick="saveAITool()">
+                Save Tool
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    // AI Tool kaydet
+    async function saveAITool() {
       try {
-        console.log('💾 Saving AI API keys...');
+        console.log('💾 Saving AI Tool...');
         
-        const { data: { user } } = await supabase.auth.getUser();
+        if (!window.supabase) {
+          throw new Error('Supabase not available');
+        }
+
+        const { data: { user } } = await window.supabase.auth.getUser();
         if (!user) {
           throw new Error('No authenticated user');
         }
 
-        const openaiKey = document.getElementById('openai-api-key').value.trim();
-        const openrouterKey = document.getElementById('openrouter-api-key').value.trim();
-        const anthropicKey = document.getElementById('anthropic-api-key').value.trim();
-        const stabilityKey = document.getElementById('stability-api-key').value.trim();
-        const midjourneyKey = document.getElementById('midjourney-api-key').value.trim();
-        const encryptKeys = document.getElementById('encrypt-keys').checked;
+        const toolName = document.getElementById('tool-name').value.trim();
+        const toolProvider = document.getElementById('tool-provider').value.trim();
+        const toolApiKey = document.getElementById('tool-api-key').value.trim();
+        const toolType = document.getElementById('tool-type').value;
+        const toolActive = document.getElementById('tool-active').checked;
+        const toolConfig = document.getElementById('tool-config').value.trim();
 
-        // Sadece active olanları kaydet
-        const openaiActive = document.getElementById('openai-active').checked;
-        const openrouterActive = document.getElementById('openrouter-active').checked;
-        const anthropicActive = document.getElementById('anthropic-active').checked;
-        const stabilityActive = document.getElementById('stability-active').checked;
-        const midjourneyActive = document.getElementById('midjourney-active').checked;
+        if (!toolName || !toolProvider || !toolApiKey) {
+          showNotification('Please fill in all required fields', 'error');
+          return;
+        }
 
-        // Önce mevcut kaydı kontrol et
-        const { data: existingKeys } = await supabase
-          .from('ai_api_keys')
+        // Tool ID oluştur (name + provider + type)
+        const toolId = `${toolType}_${toolProvider.toLowerCase()}_${toolName.toLowerCase().replace(/\s+/g, '_')}`;
+        
+        let configObj = {};
+        if (toolConfig) {
+          try {
+            configObj = JSON.parse(toolConfig);
+          } catch (e) {
+            showNotification('Invalid JSON configuration', 'error');
+            return;
+          }
+        }
+
+        // Önce mevcut tool'u kontrol et
+        const { data: existingTool } = await window.supabase
+          .from('ai_tools')
           .select('id')
+          .eq('id', toolId)
           .eq('user_id', user.id)
           .single();
 
-        let result;
-        const data = {
+        const toolData = {
+          id: toolId,
           user_id: user.id,
-          openai_key_encrypted: openaiActive ? openaiKey : '',
-          openrouter_key_encrypted: openrouterActive ? openrouterKey : '',
-          anthropic_key_encrypted: anthropicActive ? anthropicKey : '',
-          stability_key_encrypted: stabilityActive ? stabilityKey : '',
-          midjourney_key_encrypted: midjourneyActive ? midjourneyKey : '',
-          encrypt_keys: encryptKeys,
+          name: toolName,
+          provider: toolProvider,
+          is_active: toolActive,
+          api_key: toolApiKey,
+          config: configObj,
           updated_at: new Date().toISOString()
         };
 
-        if (existingKeys) {
+        let result;
+        if (existingTool) {
           // UPDATE
-          console.log('📝 Updating existing API keys');
-          result = await supabase
-            .from('ai_api_keys')
-            .update(data)
+          console.log('📝 Updating existing AI tool');
+          result = await window.supabase
+            .from('ai_tools')
+            .update(toolData)
+            .eq('id', toolId)
             .eq('user_id', user.id);
         } else {
           // INSERT
-          console.log('📝 Inserting new API keys');
-          result = await supabase
-            .from('ai_api_keys')
-            .insert([data]);
+          console.log('📝 Inserting new AI tool');
+          result = await window.supabase
+            .from('ai_tools')
+            .insert([toolData]);
         }
 
         if (result.error) {
@@ -1067,15 +1030,181 @@
           throw result.error;
         }
 
-        console.log('✅ API keys saved successfully');
-        showNotification('API keys saved successfully', 'success');
+        console.log('✅ AI Tool saved successfully');
+        showNotification('AI Tool saved successfully', 'success');
         
-        // Reload the keys to update UI
+        // Modal'ı kapat ve listeyi yenile
+        closeModal();
         await loadAIAPIKeys();
         
       } catch (error) {
-        console.error('❌ Error saving API keys:', error);
-        showNotification('Error saving API keys: ' + error.message, 'error');
+        console.error('❌ Error saving AI Tool:', error);
+        showNotification('Error saving AI Tool: ' + error.message, 'error');
+      }
+    }
+
+    // Payment Settings modalını göster
+    function showPaymentSettingsModal() {
+      const modalHtml = `
+        <div class="modal-overlay">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 class="modal-title">Payment Settings</h3>
+              <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+              <form id="payment-settings-form" class="settings-form">
+                <div class="settings-form-group">
+                  <label class="settings-form-label">Wise API Key</label>
+                  <input
+                    type="password"
+                    id="wise-api-key"
+                    placeholder="Enter Wise API key"
+                    class="settings-form-input"
+                  />
+                </div>
+                <div class="settings-form-group">
+                  <label class="settings-form-label">Payoneer API Key</label>
+                  <input
+                    type="password"
+                    id="payoneer-api-key"
+                    placeholder="Enter Payoneer API key"
+                    class="settings-form-input"
+                  />
+                </div>
+                <div class="settings-form-group">
+                  <label class="settings-form-label">Bank Name</label>
+                  <input
+                    type="text"
+                    id="bank-name"
+                    placeholder="Enter bank name"
+                    class="settings-form-input"
+                  />
+                </div>
+                <div class="settings-form-group">
+                  <label class="settings-form-label">IBAN</label>
+                  <input
+                    type="text"
+                    id="iban"
+                    placeholder="Enter IBAN"
+                    class="settings-form-input"
+                  />
+                </div>
+                <div class="settings-form-group">
+                  <label class="settings-form-label">Swift Code</label>
+                  <input
+                    type="text"
+                    id="swift-code"
+                    placeholder="Enter SWIFT code"
+                    class="settings-form-input"
+                  />
+                </div>
+                <div class="settings-form-group">
+                  <label class="settings-form-label">Account Holder Name</label>
+                  <input
+                    type="text"
+                    id="account-holder"
+                    placeholder="Enter account holder name"
+                    class="settings-form-input"
+                  />
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="settings-btn settings-btn-outline" onclick="closeModal()">
+                Cancel
+              </button>
+              <button type="button" class="settings-btn settings-btn-primary" onclick="savePaymentSettings()">
+                Save Payment Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      
+      // Önceden kaydedilmiş verileri yükle
+      loadPaymentSettings();
+    }
+
+    async function loadPaymentSettings() {
+      try {
+        if (!window.supabase) return;
+        
+        const { data: { user } } = await window.supabase.auth.getUser();
+        if (!user) return;
+
+        // payment_settings tablosundan verileri çek
+        const { data: paymentSettings } = await window.supabase
+          .from('payment_settings')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (paymentSettings) {
+          document.getElementById('wise-api-key').value = paymentSettings.wise_api_key || '';
+          document.getElementById('payoneer-api-key').value = paymentSettings.payoneer_api_key || '';
+          document.getElementById('bank-name').value = paymentSettings.bank_name || '';
+          document.getElementById('iban').value = paymentSettings.iban || '';
+          document.getElementById('swift-code').value = paymentSettings.swift_code || '';
+          document.getElementById('account-holder').value = paymentSettings.account_holder || '';
+        }
+      } catch (error) {
+        console.error('Error loading payment settings:', error);
+      }
+    }
+
+    async function savePaymentSettings() {
+      try {
+        if (!window.supabase) {
+          throw new Error('Supabase not available');
+        }
+
+        const { data: { user } } = await window.supabase.auth.getUser();
+        if (!user) {
+          throw new Error('No authenticated user');
+        }
+
+        const paymentData = {
+          user_id: user.id,
+          wise_api_key: document.getElementById('wise-api-key').value.trim(),
+          payoneer_api_key: document.getElementById('payoneer-api-key').value.trim(),
+          bank_name: document.getElementById('bank-name').value.trim(),
+          iban: document.getElementById('iban').value.trim(),
+          swift_code: document.getElementById('swift-code').value.trim(),
+          account_holder: document.getElementById('account-holder').value.trim(),
+          updated_at: new Date().toISOString()
+        };
+
+        // Önce mevcut kaydı kontrol et
+        const { data: existingSettings } = await window.supabase
+          .from('payment_settings')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+
+        let result;
+        if (existingSettings) {
+          // UPDATE
+          result = await window.supabase
+            .from('payment_settings')
+            .update(paymentData)
+            .eq('user_id', user.id);
+        } else {
+          // INSERT
+          result = await window.supabase
+            .from('payment_settings')
+            .insert([paymentData]);
+        }
+
+        if (result.error) throw result.error;
+
+        showNotification('Payment settings saved successfully', 'success');
+        closeModal();
+      } catch (error) {
+        console.error('Error saving payment settings:', error);
+        showNotification('Error saving payment settings: ' + error.message, 'error');
       }
     }
 
@@ -1096,7 +1225,6 @@
           testBtn.innerHTML = originalText;
           testBtn.disabled = false;
         }, 2000);
-        
       } catch (error) {
         console.error('Error testing connections:', error);
         showNotification('Error testing connections: ' + error.message, 'error');
@@ -1105,69 +1233,64 @@
       }
     }
 
-    // Initialize
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('🏁 Settings page loaded');
-      
-      // AI Tools butonuna event listener ekle
-      const aiToolsBtn = document.getElementById('btn-ai-tools');
-      if (aiToolsBtn) {
-        console.log('✅ AI Tools button found');
-        aiToolsBtn.addEventListener('click', function() {
-          console.log('🖱️ AI Tools button clicked');
-          if (typeof window.loadAITools === 'function') {
-            console.log('🚀 Calling loadAITools...');
-            window.loadAITools();
-          } else {
-            console.error('❌ loadAITools function not found');
-            showNotification('AI Tools module not loaded properly. Please check console for errors.', 'error');
-          }
-        });
-      }
-
-      // Setup form submission
-      const aiKeysForm = document.getElementById('form-ai-keys');
-      if (aiKeysForm) {
-        aiKeysForm.addEventListener('submit', async function(e) {
-          e.preventDefault();
-          await saveAIAPIKeys();
-        });
-      }
-
-      // Test connections button
-      const testConnectionsBtn = document.getElementById('btn-test-connections');
-      if (testConnectionsBtn) {
-        testConnectionsBtn.addEventListener('click', testAIConnections);
-      }
-
-      // Supabase yüklendikten sonra API key'leri yükle
-      waitForSupabase(async () => {
-        console.log('🚀 Supabase ready, loading API keys...');
-        try {
-          await loadAIAPIKeys();
-        } catch (error) {
-          console.error('Failed to load API keys:', error);
+    // Modal kapatma fonksiyonu
+    window.closeModal = function() {
+      const modals = document.querySelectorAll('.modal-overlay');
+      modals.forEach(modal => {
+        if (modal.parentNode) {
+          document.body.removeChild(modal);
         }
       });
+    };
 
-      // Global modal close function
-      window.closeModal = function() {
-        const modals = document.querySelectorAll('.modal-overlay');
-        modals.forEach(modal => {
-          if (modal.parentNode) {
-            document.body.removeChild(modal);
-          }
+    // Settings page initialization fonksiyonu
+    window.initSettingsPage = function() {
+      console.log('🏁 Settings page initialization started');
+      
+      // Button event listeners
+      document.getElementById('btn-manage-design-tools')?.addEventListener('click', () => {
+        showAIToolModal('design');
+      });
+      
+      document.getElementById('btn-manage-content-tools')?.addEventListener('click', () => {
+        showAIToolModal('content');
+      });
+      
+      document.getElementById('btn-payment-settings')?.addEventListener('click', () => {
+        showPaymentSettingsModal();
+      });
+      
+      document.getElementById('btn-test-connections')?.addEventListener('click', testAIConnections);
+      
+      // Eski AI Tools butonu için fallback
+      const oldAiToolsBtn = document.getElementById('btn-ai-tools');
+      if (oldAiToolsBtn) {
+        oldAiToolsBtn.addEventListener('click', () => {
+          showAIToolModal('design');
         });
-      };
+      }
+      
+      // AI Tools durumunu yükle
+      setTimeout(() => {
+        loadAIAPIKeys();
+      }, 1000);
+      
+      console.log('✅ Settings page initialized');
+    };
 
-      // Global close functions for specific modals
+    // DOM yüklendiğinde initialization başlat
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🏁 Settings page DOM loaded');
+      
+      // Modüller yüklenene kadar bekle, sonra initSettingsPage çağrılacak
+      // initSettingsPage fonksiyonu window'a atandı, modüller yüklendikten sonra çağrılacak
+      
+      // Global close functions
       window.closeEtsyUserModal = window.closeModal;
       window.closeProducerModal = window.closeModal;
       window.closeAIToolsModal = window.closeModal;
       window.closePaymentModal = window.closeModal;
       window.closeEtsyRegistrationModal = window.closeModal;
-      
-      console.log('✅ All global functions initialized');
     });
     </script> 
   </body>
