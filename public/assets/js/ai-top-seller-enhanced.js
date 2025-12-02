@@ -1,64 +1,47 @@
-// ai-top-seller-enhanced.js
+// ai-top-seller-enhanced.js - DÜZELTİLMİŞ
 import { supabase } from './supabaseClient.js';
 
-// Eksik showNotification fonksiyonunu ekleyin
-function showNotification(message, type = 'info') {
-  const notification = document.createElement('div');
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 12px 20px;
-    border-radius: 8px;
-    background-color: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#3b82f6'};
-    color: white;
-    font-weight: 500;
-    z-index: 9999;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    animation: slideIn 0.3s ease;
-  `;
-  
-  notification.textContent = message;
-  document.body.appendChild(notification);
-  
-  setTimeout(() => {
-    notification.style.opacity = '0';
-    setTimeout(() => {
-      if (notification.parentNode) {
-        document.body.removeChild(notification);
-      }
-    }, 500);
-  }, 3000);
-}
+// Loading kontrol değişkeni
+let isAnalyzing = false;
 
 export async function analyzeTopSellersWithAnimation(shopId) {
+  // Eğer zaten analiz yapılıyorsa, tekrar başlatma
+  if (isAnalyzing) {
+    console.log('⚠️ Analysis already in progress');
+    return;
+  }
+  
   try {
+    isAnalyzing = true;
+    
     // Animasyonlu loading göster
     showAnalysisLoading();
     
     showNotification('🔍 Analyzing top sellers...', 'info');
     
-    const { data: { session } } = await supabase.auth.getSession();
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
       throw new Error('User not authenticated');
     }
     
-    // 1. Önce AI analizi yap (simüle edilmiş veri veya gerçek API)
+    // 1. Önce AI analizi yap
+    console.log('🤖 Performing AI analysis for user:', user.id);
     const analysisResult = await performTopSellerAnalysis(user.id, shopId);
     
     // 2. Sonuçları Supabase'e kaydet
+    console.log('💾 Saving analysis to database...');
     await saveAnalysisToDatabase(analysisResult, user.id);
     
-    // 3. Loading'i kapat ve sonuçları göster
+    // 3. Loading'i kapat
     hideAnalysisLoading();
-    
-    showNotification('✅ Top seller analysis completed!', 'success');
     
     // 4. Sonuçları göster
     showTopSellerAnalysisWithAnimation(analysisResult);
     
+    showNotification('✅ Top seller analysis completed!', 'success');
+    
+    isAnalyzing = false;
     return analysisResult;
     
   } catch (error) {
@@ -69,152 +52,85 @@ export async function analyzeTopSellersWithAnimation(shopId) {
     // Fallback: Mock veri göster
     const mockResult = generateMockAnalysis();
     showTopSellerAnalysisWithAnimation(mockResult);
+    
+    isAnalyzing = false;
     return mockResult;
   }
 }
 
-async function performTopSellerAnalysis(userId, shopId) {
-  try {
-    // Burada gerçek AI analizi yapılacak
-    // Şimdilik mock data döndürelim
-    console.log('🤖 Performing AI analysis for user:', userId);
-    
-    // Mock AI analiz verisi
-    return {
-      analysis_id: 'analysis-' + Date.now(),
-      user_id: userId,
-      shop_id: shopId,
-      analysis_date: new Date().toISOString(),
-      trend_scores: [
-        {
-          product_id: 'prod-1',
-          listing_title: 'Personalized Coffee Mug',
-          trend_score: 92,
-          monthly_sales_estimate: 245,
-          competition_level: 'Medium',
-          price_range: '$15-25',
-          category: 'Home & Living',
-          seasonality: 'High (Year-round)'
-        },
-        {
-          product_id: 'prod-2',
-          listing_title: 'Minimalist T-Shirt Design',
-          trend_score: 88,
-          monthly_sales_estimate: 189,
-          competition_level: 'High',
-          price_range: '$20-30',
-          category: 'Apparel',
-          seasonality: 'Medium'
-        },
-        {
-          product_id: 'prod-3',
-          listing_title: 'Custom Pet Portrait',
-          trend_score: 85,
-          monthly_sales_estimate: 156,
-          competition_level: 'Low',
-          price_range: '$30-50',
-          category: 'Art & Collectibles',
-          seasonality: 'Low'
-        },
-        {
-          product_id: 'prod-4',
-          listing_title: 'Vintage Style Poster',
-          trend_score: 78,
-          monthly_sales_estimate: 134,
-          competition_level: 'Medium',
-          price_range: '$12-20',
-          category: 'Home Decor',
-          seasonality: 'High (Seasonal)'
-        },
-        {
-          product_id: 'prod-5',
-          listing_title: 'Personalized Keychain',
-          trend_score: 75,
-          monthly_sales_estimate: 98,
-          competition_level: 'Very High',
-          price_range: '$8-15',
-          category: 'Accessories',
-          seasonality: 'Year-round'
-        }
-      ],
-      forecasts: {
-        'prod-1': { month_1: 260, month_2: 275, month_3: 290 },
-        'prod-2': { month_1: 200, month_2: 210, month_3: 220 },
-        'prod-3': { month_1: 165, month_2: 175, month_3: 185 },
-        'prod-4': { month_1: 140, month_2: 150, month_3: 160 },
-        'prod-5': { month_1: 105, month_2: 110, month_3: 115 }
-      },
-      insights: {
-        best_category: 'Home & Living',
-        best_price_range: '$15-30',
-        recommended_tags: ['personalized', 'custom', 'gift', 'unique', 'handmade'],
-        seasonal_trends: 'Q4 (Oct-Dec) shows 40% increase in sales',
-        growth_opportunities: ['Bundle products', 'Expand to related categories', 'Improve product photography']
+// showAnalysisLoading fonksiyonunu düzelt
+function showAnalysisLoading() {
+  // Eğer zaten loading gösteriliyorsa, yeniden oluşturma
+  if (document.getElementById('analysis-loading')) {
+    return;
+  }
+  
+  const loadingHTML = `
+    <div class="analysis-loading-overlay" id="analysis-loading">
+      <div class="analysis-loading-content">
+        <div class="loading-animation">
+          <div class="pulse-circle"></div>
+          <div class="pulse-circle delay-1"></div>
+          <div class="pulse-circle delay-2"></div>
+        </div>
+        <h3 style="color: white; margin-bottom: 1rem;">Analyzing Top Sellers</h3>
+        <p style="color: #d1d5db; margin-bottom: 2rem;">Scanning Etsy trends and predicting sales...</p>
+      </div>
+    </div>
+  `;
+
+  const loadingContainer = document.createElement('div');
+  loadingContainer.innerHTML = loadingHTML;
+  document.body.appendChild(loadingContainer);
+}
+
+// hideAnalysisLoading fonksiyonunu düzelt
+function hideAnalysisLoading() {
+  const loading = document.getElementById('analysis-loading');
+  if (loading) {
+    loading.style.opacity = '0';
+    setTimeout(() => {
+      if (loading.parentNode) {
+        loading.parentNode.removeChild(loading);
       }
-    };
-    
-  } catch (error) {
-    console.error('AI analysis failed:', error);
-    throw error;
+    }, 300);
   }
 }
 
+// saveAnalysisToDatabase fonksiyonunu düzelt (tek insert yapsın)
 async function saveAnalysisToDatabase(analysis, userId) {
   try {
-    console.log('💾 Saving analysis to database...');
+    // Tüm analizi tek bir JSON olarak kaydet
+    const record = {
+      user_id: userId,
+      trend_scores: analysis.trend_scores,
+      forecast_3month: analysis.forecasts,
+      insights: analysis.insights,
+      metadata: {
+        shop_id: analysis.shop_id,
+        analysis_id: analysis.analysis_id,
+        total_products: analysis.trend_scores.length
+      },
+      analysis_date: new Date().toISOString()
+    };
     
-    // Top Seller Analysis tablosuna ana analiz kaydı
-    const { data: analysisRecord, error: analysisError } = await supabase
+    const { data, error } = await supabase
       .from('top_seller_analysis')
-      .insert({
-        user_id: userId,
-        analysis_date: new Date().toISOString(),
-        trend_scores: analysis.trend_scores,
-        forecasts: analysis.forecasts,
-        insights: analysis.insights,
-        metadata: {
-          shop_id: analysis.shop_id,
-          total_products: analysis.trend_scores.length,
-          average_trend_score: analysis.trend_scores.reduce((sum, item) => sum + item.trend_score, 0) / analysis.trend_scores.length
-        }
-      })
+      .insert(record)
       .select()
-      .single();
-
-    if (analysisError) throw analysisError;
+      .single(); // Sadece bir kayıt döndür
     
-    console.log('✅ Analysis saved with ID:', analysisRecord.id);
-    
-    // Her bir ürün için ayrı kayıt (opsiyonel)
-    for (const product of analysis.trend_scores) {
-      const { error: productError } = await supabase
-        .from('top_seller_analysis')
-        .insert({
-          user_id: userId,
-          product_id: product.product_id,
-          listing_title: product.listing_title,
-          trend_score: product.trend_score,
-          monthly_sales_estimate: product.monthly_sales_estimate,
-          forecast_3month: analysis.forecasts[product.product_id],
-          analysis_date: new Date().toISOString(),
-          metadata: {
-            competition_level: product.competition_level,
-            price_range: product.price_range,
-            category: product.category,
-            seasonality: product.seasonality
-          }
-        });
-        
-      if (productError) {
-        console.warn('⚠️ Could not save individual product:', productError.message);
-      }
+    if (error) {
+      console.warn('⚠️ Database warning:', error.message);
+      return null;
     }
     
-    return analysisRecord;
+    console.log('✅ Analysis saved with ID:', data.id);
+    return data;
     
   } catch (error) {
-    console.error('❌ Error saving to database:', error);
-    throw error;
+    console.error('❌ Error saving to database:', error.message);
+    return null;
   }
 }
 
