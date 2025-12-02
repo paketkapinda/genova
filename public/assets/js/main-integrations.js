@@ -1,6 +1,5 @@
 // main-integrations.js
 import { analyzeTopSellersWithAnimation } from './ai-top-seller-enhanced.js';
-import { showProductContentGenerator } from './ai-product-content.js';
 import { loadDashboardPayments } from './dashboard-payments.js';
 import { loadRecentActivities } from './dashboard-activities.js';
 
@@ -30,6 +29,52 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
+// Eksik fonksiyonları ekleyin
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    background-color: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#3b82f6'};
+    color: white;
+    font-weight: 500;
+    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    animation: slideIn 0.3s ease;
+  `;
+  
+  // Animasyon için style ekle
+  if (!document.getElementById('notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'notification-styles';
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => {
+      if (notification.parentNode) {
+        document.body.removeChild(notification);
+      }
+    }, 300);
+  }, 3000);
+}
 function handleAICardClick(cardId) {
   switch(cardId) {
     case 'btn-generate-description':
