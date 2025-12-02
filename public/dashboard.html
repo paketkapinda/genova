@@ -840,6 +840,30 @@
       </main>
     </div>
 
+    <!-- dashboard.html sonunda -->
+<script src="/assets/js/env.js"></script>
+<script type="module">
+  // Önce supabaseClient'i import et
+  import { supabase } from '/assets/js/supabaseClient.js';
+  
+  // Sonra diğer modülleri import et
+  import { analyzeTopSellersWithAnimation } from '/assets/js/ai-top-seller-enhanced.js';
+  
+  // Globale ata
+  window.supabase = supabase;
+  window.analyzeTopSellersWithAnimation = analyzeTopSellersWithAnimation;
+  
+  // Event listener'ları ekle
+  document.addEventListener('DOMContentLoaded', function() {
+    const analyzeBtn = document.getElementById('btn-analyze-top-seller');
+    if (analyzeBtn) {
+      analyzeBtn.addEventListener('click', () => {
+        analyzeTopSellersWithAnimation('current_shop');
+      });
+    }
+  });
+</script>
+
     <!-- JavaScript Import -->
     <script src="/assets/js/env.js"></script>
     <script type="module" src="/assets/js/supabaseClient.js"></script>
@@ -849,5 +873,6 @@
     <script type="module" src="/assets/js/ai-top-seller-enhanced.js"></script>
     <script type="module" src="/assets/js/dashboard-payments.js"></script>
     <script type="module" src="/assets/js/main-integrations.js"></script>
+    <script type="module" src="/assets/js/env.js"></script>
   </body>
 </html>
