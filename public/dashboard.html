@@ -840,25 +840,48 @@
       </main>
     </div>
 
-    <!-- dashboard.html sonunda -->
+<!-- dashboard.html - SON KISIM -->
 <script src="/assets/js/env.js"></script>
 <script type="module">
-  // Önce supabaseClient'i import et
+  // Sadece bu script
   import { supabase } from '/assets/js/supabaseClient.js';
   
-  // Sonra diğer modülleri import et
-  import { analyzeTopSellersWithAnimation } from '/assets/js/ai-top-seller-enhanced.js';
-  
-  // Globale ata
+  // Supabase'i global'e ata (diğer scriptler için)
   window.supabase = supabase;
-  window.analyzeTopSellersWithAnimation = analyzeTopSellersWithAnimation;
   
-  // Event listener'ları ekle
+  // Buton event'ini burada handle et
   document.addEventListener('DOMContentLoaded', function() {
     const analyzeBtn = document.getElementById('btn-analyze-top-seller');
+    
     if (analyzeBtn) {
-      analyzeBtn.addEventListener('click', () => {
-        analyzeTopSellersWithAnimation('current_shop');
+      // Çoklu tıklamayı önlemek için
+      let isAnalyzing = false;
+      
+      analyzeBtn.addEventListener('click', async function() {
+        if (isAnalyzing) return;
+        
+        isAnalyzing = true;
+        this.disabled = true;
+        const originalText = this.innerHTML;
+        this.innerHTML = '🔍 Analyzing...';
+        
+        try {
+          // Modülü dinamik import et
+          const module = await import('/assets/js/ai-top-seller-enhanced.js');
+          await module.analyzeTopSellersWithAnimation('current_shop');
+        } catch (error) {
+          console.error('Error:', error);
+          // Basit notification
+          const notification = document.createElement('div');
+          notification.textContent = 'Error: ' + error.message;
+          notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #ef4444; color: white; padding: 12px 20px; border-radius: 8px; z-index: 9999;';
+          document.body.appendChild(notification);
+          setTimeout(() => notification.remove(), 3000);
+        } finally {
+          isAnalyzing = false;
+          this.disabled = false;
+          this.innerHTML = originalText;
+        }
       });
     }
   });
