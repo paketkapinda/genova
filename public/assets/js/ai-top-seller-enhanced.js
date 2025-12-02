@@ -4,6 +4,12 @@ import { supabase } from './supabaseClient.js';
 // Loading kontrol değişkeni
 let isAnalyzing = false;
 
+// Dashboard'dan ürün sayfasına yönlendirme için
+export function redirectToProductsWithAnalysis() {
+  showNotification('Redirecting to products for analysis...', 'info');
+  window.location.href = '/products.html?action=analyze_top_sellers';
+}
+
 // Eksik fonksiyonları ekleyelim
 function showNotification(message, type = 'info') {
   const notification = document.createElement('div');
