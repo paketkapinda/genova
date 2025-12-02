@@ -35,7 +35,7 @@ serve(async (req) => {
 
     // Get Etsy account
     const { data: etsyAccount, error: accountError } = await supabaseClient
-      .from('etsy_accounts')
+      .from('etsy_shops')
       .select('*')
       .eq('user_id', user.id)
       .eq('shop_id', shop_id)
@@ -115,5 +115,6 @@ serve(async (req) => {
     );
   }
 });
+
 
 
