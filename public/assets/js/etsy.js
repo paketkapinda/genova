@@ -11,7 +11,7 @@ export async function loadEtsyShops() {
     if (!user) return;
 
     const { data, error } = await supabase
-      .from('etsy_accounts')
+      .from('etsy_shops')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
@@ -179,7 +179,7 @@ window.registerEtsyAccount = async () => {
 
     // Etsy hesabını kaydet
     const { data, error } = await supabase
-      .from('etsy_accounts')
+      .from('etsy_shops')
       .insert({
         user_id: user.id,
         shop_id: `etsy-${Date.now()}`,
@@ -231,7 +231,7 @@ window.testEtsyConnection = async (shopId) => {
     setTimeout(async () => {
       // Update connection status
       const { error } = await supabase
-        .from('etsy_accounts')
+        .from('etsy_shops')
         .update({ 
           is_active: true,
           updated_at: new Date().toISOString()
@@ -283,7 +283,7 @@ window.removeEtsyShop = async (shopId) => {
 
   try {
     const { error } = await supabase
-      .from('etsy_accounts')
+      .from('etsy_shops')
       .delete()
       .eq('id', shopId);
 
