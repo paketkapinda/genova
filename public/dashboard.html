@@ -1085,9 +1085,10 @@
   
   import { supabase, getUserReferralInfo, getReferralHistory } from '/assets/js/supabaseClient.js';
   
-  // Supabase'i global'e ata
+  // Supabase'i global'e ata (diğer scriptler için)
   window.supabase = supabase;
   
+  // Buton event'ini burada handle et
   document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Dashboard loaded');
     
@@ -1102,6 +1103,7 @@
     // 1. Analyze Top Sellers butonu
     const analyzeBtn = document.getElementById('btn-analyze-top-seller');
     if (analyzeBtn) {
+      // Çoklu tıklamayı önlemek için
       let isAnalyzing = false;
       
       analyzeBtn.addEventListener('click', async function() {
@@ -1113,11 +1115,17 @@
         this.innerHTML = '🔍 Analyzing...';
         
         try {
+          // Modülü dinamik import et
           const module = await import('/assets/js/ai-top-seller-enhanced.js');
           await module.analyzeTopSellersWithAnimation('current_shop');
         } catch (error) {
           console.error('Error:', error);
-          showNotification('Error: ' + error.message, 'error');
+          // Basit notification
+          const notification = document.createElement('div');
+          notification.textContent = 'Error: ' + error.message;
+          notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #ef4444; color: white; padding: 12px 20px; border-radius: 8px; z-index: 9999;';
+          document.body.appendChild(notification);
+          setTimeout(() => notification.remove(), 3000);
         } finally {
           isAnalyzing = false;
           this.disabled = false;
@@ -1129,62 +1137,42 @@
     // 2. Referans sistemini yükle
     await loadReferralInfo(user.id);
     await loadReferralHistory(user.id);
-    setupReferralEventListeners();
+    setupEventListeners(user.id);
     
-    // 3. Diğer entegrasyonları yükle
-    try {
-      const integrations = await import('/assets/js/main-integrations.js');
-      if (integrations.initAllIntegrations) {
-        await integrations.initAllIntegrations();
-      }
-    } catch (error) {
-      console.error('Integrations error:', error);
-    }
-    
-    // 4. Payments'i yükle
-    try {
-      const payments = await import('/assets/js/dashboard-payments.js');
-      if (payments.initializePayments) {
-        await payments.initializePayments();
-      }
-    } catch (error) {
-      console.error('Payments error:', error);
-    }
-    
-    console.log('✅ Dashboard fully loaded');
+    console.log('✅ Dashboard initialized');
   });
   
-  // Referans bilgilerini yükle
   async function loadReferralInfo(userId) {
     try {
       const referralInfo = await getUserReferralInfo(userId);
       
       if (referralInfo) {
-        const balanceEl = document.getElementById('referral-balance');
-        const referralsEl = document.getElementById('total-referrals');
-        const linkInput = document.getElementById('referral-link-input');
+        // Referans bilgilerini göster
+        document.getElementById('referral-balance').textContent = `$${referralInfo.referral_balance.toFixed(2)}`;
+        document.getElementById('total-referrals').textContent = referralInfo.total_referrals;
         
-        if (balanceEl) balanceEl.textContent = `$${referralInfo.referral_balance.toFixed(2)}`;
-        if (referralsEl) referralsEl.textContent = referralInfo.total_referrals;
-        if (linkInput) linkInput.value = `${window.location.origin}/login.html?ref=${referralInfo.referral_code}`;
+        // Referans link'ini oluştur
+        const referralLink = `${window.location.origin}/login.html?ref=${referralInfo.referral_code}`;
+        document.getElementById('referral-link-input').value = referralLink;
       }
     } catch (error) {
       console.error('Referral info load error:', error);
     }
   }
   
-  // Referans geçmişini yükle
   async function loadReferralHistory(userId) {
     try {
       const referrals = await getReferralHistory(userId);
       const historyList = document.getElementById('referral-history-list');
       
-      if (!historyList || referrals.length === 0) {
-        return;
+      if (referrals.length === 0) {
+        return; // Boş state'i göster
       }
       
+      // Geçmişi temizle
       historyList.innerHTML = '';
       
+      // Her referans için bir item oluştur
       referrals.forEach(ref => {
         const date = new Date(ref.created_at);
         const formattedDate = date.toLocaleDateString('en-US', {
@@ -1193,8 +1181,7 @@
           day: 'numeric'
         });
         
-        const initial = ref.full_name ? ref.full_name.charAt(0).toUpperCase() : 
-                       ref.email ? ref.email.charAt(0).toUpperCase() : 'U';
+        const initial = ref.full_name ? ref.full_name.charAt(0).toUpperCase() : ref.email.charAt(0).toUpperCase();
         
         const item = document.createElement('div');
         item.className = 'referral-history-item';
@@ -1202,7 +1189,7 @@
           <div class="referral-avatar">${initial}</div>
           <div class="referral-content">
             <div class="referral-name">${ref.full_name || 'User'}</div>
-            <div class="referral-email">${ref.email || ''}</div>
+            <div class="referral-email">${ref.email}</div>
             <div class="referral-date">Joined on ${formattedDate}</div>
           </div>
           <div class="referral-badge">+$8.70</div>
@@ -1210,32 +1197,34 @@
         
         historyList.appendChild(item);
       });
+      
     } catch (error) {
       console.error('Referral history load error:', error);
     }
   }
   
-  // Referans event listener'larını ayarla
-  function setupReferralEventListeners() {
+  function setupEventListeners(userId) {
     // Link kopyalama
     const copyBtn = document.getElementById('copy-referral-link');
     const linkInput = document.getElementById('referral-link-input');
     
-    if (copyBtn && linkInput) {
+    if (copyBtn) {
       copyBtn.addEventListener('click', () => {
         linkInput.select();
-        linkInput.setSelectionRange(0, 99999);
+        linkInput.setSelectionRange(0, 99999); // Mobil için
         
         try {
           navigator.clipboard.writeText(linkInput.value)
             .then(() => {
               showCopySuccess(copyBtn);
             })
-            .catch(() => {
+            .catch(err => {
+              // Fallback için
               document.execCommand('copy');
               showCopySuccess(copyBtn);
             });
         } catch (err) {
+          // Eski tarayıcılar için
           document.execCommand('copy');
           showCopySuccess(copyBtn);
         }
@@ -1247,27 +1236,25 @@
     socialBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         const platform = btn.getAttribute('data-platform');
-        const link = linkInput ? linkInput.value : '';
-        if (link) {
-          shareOnSocial(platform, link);
-        }
+        shareOnSocial(platform, linkInput.value);
       });
     });
   }
   
-  // Kopyalama başarı mesajı
   function showCopySuccess(button) {
     const originalText = button.textContent;
     button.textContent = 'Copied!';
+    button.style.background = 'linear-gradient(135deg, #10b981, #059669)';
     
     setTimeout(() => {
       button.textContent = originalText;
+      button.style.background = '';
     }, 2000);
   }
   
-  // Sosyal medya paylaşım
   function shareOnSocial(platform, link) {
     const text = 'Join Etsy AI POD - The ultimate print-on-demand platform with AI-powered tools! Earn with me!';
+    
     let shareUrl = '';
     
     switch (platform) {
@@ -1287,43 +1274,6 @@
     }
   }
   
-  // Notification fonksiyonu
-  function showNotification(message, type = 'info') {
-    // Notification container'ı oluştur veya bul
-    let container = document.getElementById('notification-container');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'notification-container';
-      container.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
-      `;
-      document.body.appendChild(container);
-    }
-    
-    // Notification oluştur
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-      padding: 12px 16px;
-      border-radius: 8px;
-      margin-bottom: 10px;
-      color: white;
-      font-weight: 500;
-      background: ${type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#3b82f6'};
-      animation: slideIn 0.3s ease-out;
-    `;
-    notification.textContent = message;
-    
-    container.appendChild(notification);
-    
-    // Otomatik kaldır
-    setTimeout(() => {
-      notification.remove();
-    }, 3000);
-  }
-  
   // Sayfa yenilendiğinde referans bilgilerini güncelle
   window.addEventListener('focus', async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -1333,6 +1283,5 @@
     }
   });
 </script>
-
   </body>
 </html>
