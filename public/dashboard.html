@@ -636,6 +636,141 @@
         grid-template-columns: 1fr;
       }
     }
+      /* Referral Section Styles */
+.referral-stats {
+  margin-bottom: 1.5rem;
+}
+
+.referral-link-box {
+  background: linear-gradient(135deg, #fef7f0, #fef2f2);
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.referral-link-box h4 {
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+
+.referral-link-box p {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+#referral-link-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#referral-link-input:focus {
+  outline: none;
+  border-color: #ea580c;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
+}
+
+.btn-social {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-social:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.btn-social.facebook { background: #1877f2; color: white; }
+.btn-social.twitter { background: #1da1f2; color: white; }
+.btn-social.whatsapp { background: #25d366; color: white; }
+
+.referral-history-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #f3f4f6;
+  border-radius: 8px;
+  background: #fafafa;
+  margin-bottom: 0.5rem;
+}
+
+.referral-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ea580c, #c2410c);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.referral-content {
+  flex: 1;
+}
+
+.referral-name {
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 0.25rem;
+}
+
+.referral-email {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.referral-date {
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+.referral-badge {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.copy-success {
+  position: absolute;
+  top: 50%;
+  right: 60px;
+  transform: translateY(-50%);
+  background: #10b981;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.copy-success.show {
+  opacity: 1;
+}
     </style>
   </head>
   
@@ -768,6 +903,110 @@
           </div>
         </div>
 
+        <!-- Refer a Friend Section -->
+<div class="dashboard-section">
+  <div class="section-header">
+    <h2>👥 Refer a Friend</h2>
+    <p>Earn $8.70 for each successful referral!</p>
+  </div>
+  
+  <div class="referral-stats">
+    <div class="revenue-stats">
+      <div class="revenue-card">
+        <div class="revenue-icon total" style="background: #dbeafe; color: #1e40af;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M12 8v8m-4-4h8m6 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div class="revenue-info">
+          <div class="amount" id="referral-balance">$0.00</div>
+          <div class="label">Referral Balance</div>
+        </div>
+      </div>
+      
+      <div class="revenue-card">
+        <div class="revenue-icon pending" style="background: #fef3c7; color: #d97706;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5 5.197v-1a6 6 0 00-4.5-5.808"/>
+          </svg>
+        </div>
+        <div class="revenue-info">
+          <div class="amount" id="total-referrals">0</div>
+          <div class="label">Total Referrals</div>
+        </div>
+      </div>
+      
+      <div class="revenue-card">
+        <div class="revenue-icon completed" style="background: #d1fae5; color: #059669;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div class="revenue-info">
+          <div class="amount">$8.70</div>
+          <div class="label">Per Referral</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Referral Link Box -->
+    <div class="referral-link-box" style="margin-top: 1.5rem; padding: 1.5rem; background: linear-gradient(135deg, #fef7f0, #fef2f2); border-radius: 12px; border: 1px solid #fde68a;">
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+          <h4 style="font-weight: 600; color: #111827; margin-bottom: 0.5rem;">Your Referral Link</h4>
+          <p style="color: #6b7280; font-size: 0.875rem;">Share this link with friends. When they sign up, you'll earn $8.70!</p>
+        </div>
+        
+        <div style="display: flex; gap: 0.5rem;">
+          <div style="flex: 1; position: relative;">
+            <input 
+              type="text" 
+              id="referral-link-input" 
+              readonly 
+              value="Loading..." 
+              style="width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;"
+            />
+          </div>
+          <button 
+            id="copy-referral-link" 
+            class="btn btn-primary"
+            style="white-space: nowrap;"
+          >
+            Copy Link
+          </button>
+        </div>
+        
+        <!-- Social Share Buttons -->
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+          <button class="btn-social" data-platform="facebook" style="flex: 1; background: #1877f2; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer;">
+            Facebook
+          </button>
+          <button class="btn-social" data-platform="twitter" style="flex: 1; background: #1da1f2; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer;">
+            Twitter
+          </button>
+          <button class="btn-social" data-platform="whatsapp" style="flex: 1; background: #25d366; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer;">
+            WhatsApp
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Referral History -->
+    <div class="referral-history" style="margin-top: 1.5rem;">
+      <h4 style="font-weight: 600; color: #111827; margin-bottom: 1rem;">Recent Referrals</h4>
+      <div class="activity-feed" id="referral-history-list">
+        <div class="empty-state" style="text-align: center; padding: 2rem; color: #6b7280;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="margin-bottom: 1rem;">
+            <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5 5.197v-1a6 6 0 00-4.5-5.808"/>
+          </svg>
+          <p>No referrals yet</p>
+          <small>Share your referral link to start earning!</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+        
         <!-- Payments & Revenue Section -->
         <div class="dashboard-section">
           <div class="section-header">
@@ -885,6 +1124,170 @@
       });
     }
   });
+  <!-- Referral System Script -->
+<script type="module">
+  import { supabase, getUserReferralInfo, getReferralHistory } from '/assets/js/supabaseClient.js';
+  
+  document.addEventListener('DOMContentLoaded', async function() {
+    // Kullanıcı oturumunu kontrol et
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      console.error('User not authenticated');
+      return;
+    }
+    
+    // Referans bilgilerini yükle
+    await loadReferralInfo(user.id);
+    
+    // Referans geçmişini yükle
+    await loadReferralHistory(user.id);
+    
+    // Event listener'ları ayarla
+    setupEventListeners(user.id);
+  });
+  
+  async function loadReferralInfo(userId) {
+    try {
+      const referralInfo = await getUserReferralInfo(userId);
+      
+      if (referralInfo) {
+        // Referans bilgilerini göster
+        document.getElementById('referral-balance').textContent = `$${referralInfo.referral_balance.toFixed(2)}`;
+        document.getElementById('total-referrals').textContent = referralInfo.total_referrals;
+        
+        // Referans link'ini oluştur
+        const referralLink = `${window.location.origin}/login.html?ref=${referralInfo.referral_code}`;
+        document.getElementById('referral-link-input').value = referralLink;
+      }
+    } catch (error) {
+      console.error('Referral info load error:', error);
+    }
+  }
+  
+  async function loadReferralHistory(userId) {
+    try {
+      const referrals = await getReferralHistory(userId);
+      const historyList = document.getElementById('referral-history-list');
+      
+      if (referrals.length === 0) {
+        return; // Boş state'i göster
+      }
+      
+      // Geçmişi temizle
+      historyList.innerHTML = '';
+      
+      // Her referans için bir item oluştur
+      referrals.forEach(ref => {
+        const date = new Date(ref.created_at);
+        const formattedDate = date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+        
+        const initial = ref.full_name ? ref.full_name.charAt(0).toUpperCase() : ref.email.charAt(0).toUpperCase();
+        
+        const item = document.createElement('div');
+        item.className = 'referral-history-item';
+        item.innerHTML = `
+          <div class="referral-avatar">${initial}</div>
+          <div class="referral-content">
+            <div class="referral-name">${ref.full_name || 'User'}</div>
+            <div class="referral-email">${ref.email}</div>
+            <div class="referral-date">Joined on ${formattedDate}</div>
+          </div>
+          <div class="referral-badge">+$8.70</div>
+        `;
+        
+        historyList.appendChild(item);
+      });
+      
+    } catch (error) {
+      console.error('Referral history load error:', error);
+    }
+  }
+  
+  function setupEventListeners(userId) {
+    // Link kopyalama
+    const copyBtn = document.getElementById('copy-referral-link');
+    const linkInput = document.getElementById('referral-link-input');
+    
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        linkInput.select();
+        linkInput.setSelectionRange(0, 99999); // Mobil için
+        
+        try {
+          navigator.clipboard.writeText(linkInput.value)
+            .then(() => {
+              showCopySuccess(copyBtn);
+            })
+            .catch(err => {
+              // Fallback için
+              document.execCommand('copy');
+              showCopySuccess(copyBtn);
+            });
+        } catch (err) {
+          // Eski tarayıcılar için
+          document.execCommand('copy');
+          showCopySuccess(copyBtn);
+        }
+      });
+    }
+    
+    // Sosyal medya paylaşım butonları
+    const socialBtns = document.querySelectorAll('.btn-social');
+    socialBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const platform = btn.getAttribute('data-platform');
+        shareOnSocial(platform, linkInput.value);
+      });
+    });
+  }
+  
+  function showCopySuccess(button) {
+    const originalText = button.textContent;
+    button.textContent = 'Copied!';
+    button.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+    
+    setTimeout(() => {
+      button.textContent = originalText;
+      button.style.background = '';
+    }, 2000);
+  }
+  
+  function shareOnSocial(platform, link) {
+    const text = 'Join Etsy AI POD - The ultimate print-on-demand platform with AI-powered tools! Earn with me!';
+    
+    let shareUrl = '';
+    
+    switch (platform) {
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(link)}`;
+        break;
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + link)}`;
+        break;
+    }
+    
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'width=600,height=400');
+    }
+  }
+  
+  // Sayfa yenilendiğinde referans bilgilerini güncelle
+  window.addEventListener('focus', async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await loadReferralInfo(user.id);
+      await loadReferralHistory(user.id);
+    }
+  });
+</script>
 </script>
 
     <!-- JavaScript Import -->
