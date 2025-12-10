@@ -1081,14 +1081,11 @@
     
 <script src="/assets/js/env.js"></script>
 <script type="module">
-  // Tüm dashboard kodları burada
-  
   import { supabase, getUserReferralInfo, getReferralHistory } from '/assets/js/supabaseClient.js';
   
-  // Supabase'i global'e ata (diğer scriptler için)
+  // Supabase'i global'e ata
   window.supabase = supabase;
   
-  // Buton event'ini burada handle et
   document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Dashboard loaded');
     
@@ -1100,10 +1097,11 @@
       return;
     }
     
+    console.log('User ID:', user.id);
+    
     // 1. Analyze Top Sellers butonu
     const analyzeBtn = document.getElementById('btn-analyze-top-seller');
     if (analyzeBtn) {
-      // Çoklu tıklamayı önlemek için
       let isAnalyzing = false;
       
       analyzeBtn.addEventListener('click', async function() {
@@ -1115,7 +1113,6 @@
         this.innerHTML = '🔍 Analyzing...';
         
         try {
-          // Modülü dinamik import et
           const module = await import('/assets/js/ai-top-seller-enhanced.js');
           await module.analyzeTopSellersWithAnimation('current_shop');
         } catch (error) {
@@ -1137,7 +1134,7 @@
     // 2. Referans sistemini yükle
     await loadReferralInfo(user.id);
     await loadReferralHistory(user.id);
-    setupEventListeners(user.id);
+    setupEventListeners();
     
     console.log('✅ Dashboard initialized');
   });
@@ -1146,15 +1143,27 @@
     try {
       const referralInfo = await getUserReferralInfo(userId);
       
-      if (referralInfo) {
-        // Referans bilgilerini göster
-        document.getElementById('referral-balance').textContent = `$${referralInfo.referral_balance.toFixed(2)}`;
-        document.getElementById('total-referrals').textContent = referralInfo.total_referrals;
-        
-        // Referans link'ini oluştur
-        const referralLink = `${window.location.origin}/login.html?ref=${referralInfo.referral_code}`;
-        document.getElementById('referral-link-input').value = referralLink;
+      // Referans link'ini oluştur (UUID'nin ilk kısmı)
+      const referralCode = userId.split('-')[0];
+      const referralLink = `${window.location.origin}/login.html?ref=${referralCode}`;
+      
+      // DOM'u güncelle
+      const balanceEl = document.getElementById('referral-balance');
+      const referralsEl = document.getElementById('total-referrals');
+      const linkInput = document.getElementById('referral-link-input');
+      
+      if (balanceEl) {
+        balanceEl.textContent = `$${(referralInfo.referral_balance || 0).toFixed(2)}`;
       }
+      
+      if (referralsEl) {
+        referralsEl.textContent = referralInfo.total_referrals || 0;
+      }
+      
+      if (linkInput) {
+        linkInput.value = referralLink;
+      }
+      
     } catch (error) {
       console.error('Referral info load error:', error);
     }
@@ -1165,14 +1174,23 @@
       const referrals = await getReferralHistory(userId);
       const historyList = document.getElementById('referral-history-list');
       
-      if (referrals.length === 0) {
-        return; // Boş state'i göster
+      if (!historyList) return;
+      
+      if (!referrals || referrals.length === 0) {
+        historyList.innerHTML = `
+          <div class="empty-state" style="text-align: center; padding: 2rem; color: #6b7280;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="margin-bottom: 1rem;">
+              <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5 5.197v-1a6 6 0 00-4.5-5.808"/>
+            </svg>
+            <p>No referrals yet</p>
+            <small>Share your referral link to start earning!</small>
+          </div>
+        `;
+        return;
       }
       
-      // Geçmişi temizle
       historyList.innerHTML = '';
       
-      // Her referans için bir item oluştur
       referrals.forEach(ref => {
         const date = new Date(ref.created_at);
         const formattedDate = date.toLocaleDateString('en-US', {
@@ -1181,15 +1199,16 @@
           day: 'numeric'
         });
         
-        const initial = ref.full_name ? ref.full_name.charAt(0).toUpperCase() : ref.email.charAt(0).toUpperCase();
+        const initial = ref.full_name ? ref.full_name.charAt(0).toUpperCase() : 
+                       ref.email ? ref.email.charAt(0).toUpperCase() : 'U';
         
         const item = document.createElement('div');
         item.className = 'referral-history-item';
         item.innerHTML = `
           <div class="referral-avatar">${initial}</div>
           <div class="referral-content">
-            <div class="referral-name">${ref.full_name || 'User'}</div>
-            <div class="referral-email">${ref.email}</div>
+            <div class="referral-name">${ref.full_name || 'New User'}</div>
+            <div class="referral-email">${ref.email || ''}</div>
             <div class="referral-date">Joined on ${formattedDate}</div>
           </div>
           <div class="referral-badge">+$8.70</div>
@@ -1203,15 +1222,15 @@
     }
   }
   
-  function setupEventListeners(userId) {
+  function setupEventListeners() {
     // Link kopyalama
     const copyBtn = document.getElementById('copy-referral-link');
     const linkInput = document.getElementById('referral-link-input');
     
-    if (copyBtn) {
+    if (copyBtn && linkInput) {
       copyBtn.addEventListener('click', () => {
         linkInput.select();
-        linkInput.setSelectionRange(0, 99999); // Mobil için
+        linkInput.setSelectionRange(0, 99999);
         
         try {
           navigator.clipboard.writeText(linkInput.value)
@@ -1219,12 +1238,10 @@
               showCopySuccess(copyBtn);
             })
             .catch(err => {
-              // Fallback için
               document.execCommand('copy');
               showCopySuccess(copyBtn);
             });
         } catch (err) {
-          // Eski tarayıcılar için
           document.execCommand('copy');
           showCopySuccess(copyBtn);
         }
@@ -1236,14 +1253,20 @@
     socialBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         const platform = btn.getAttribute('data-platform');
-        shareOnSocial(platform, linkInput.value);
+        const link = linkInput ? linkInput.value : '';
+        
+        if (link && !link.includes('ref=null')) {
+          shareOnSocial(platform, link);
+        } else {
+          alert('Referans linkiniz yükleniyor, lütfen bekleyin...');
+        }
       });
     });
   }
   
   function showCopySuccess(button) {
     const originalText = button.textContent;
-    button.textContent = 'Copied!';
+    button.textContent = '✓ Kopyalandı!';
     button.style.background = 'linear-gradient(135deg, #10b981, #059669)';
     
     setTimeout(() => {
@@ -1253,19 +1276,22 @@
   }
   
   function shareOnSocial(platform, link) {
-    const text = 'Join Etsy AI POD - The ultimate print-on-demand platform with AI-powered tools! Earn with me!';
+    const text = 'Etsy AI POD ile print-on-demand işinizi büyütün! Profesyonel tasarımlar, AI destekli araçlar ve otomatik üretim. Benimle birlikte kazanın!';
     
     let shareUrl = '';
     
     switch (platform) {
       case 'facebook':
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`;
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}&quote=${encodeURIComponent(text)}`;
         break;
       case 'twitter':
         shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(link)}`;
         break;
       case 'whatsapp':
         shareUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + link)}`;
+        break;
+      case 'telegram':
+        shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
         break;
     }
     
