@@ -37,6 +37,252 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
+// ==================== REFERRAL SYSTEM FUNCTIONS ====================
+
+// Rastgele referral code oluşturma fonksiyonu
+export function generateReferralCode(length = 8) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
+// URL'den referral code çıkarma fonksiyonu
+export function getReferralCodeFromURL() {
+    if (typeof window === 'undefined') return null;
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('ref') || null;
+}
+
+// Referans kaydı oluşturma fonksiyonu
+export async function createProfileWithReferral(user, referralCode = null) {
+    try {
+        let referredBy = null;
+        
+        // Eğer referral code varsa, referans veren kullanıcıyı bul
+        if (referralCode) {
+            const { data: referrer, error: refError } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('referral_code', referralCode)
+                .single();
+            
+            if (!refError && referrer) {
+                referredBy = referrer.id;
+            }
+        }
+        
+        // Kullanıcı için unique referral code oluştur
+        let uniqueReferralCode = generateReferralCode();
+        let isUnique = false;
+        let attempts = 0;
+        
+        // Benzersiz bir kod oluşturana kadar dene (max 5 deneme)
+        while (!isUnique && attempts < 5) {
+            const { data: existing } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('referral_code', uniqueReferralCode)
+                .maybeSingle();
+            
+            if (!existing) {
+                isUnique = true;
+            } else {
+                uniqueReferralCode = generateReferralCode();
+                attempts++;
+            }
+        }
+        
+        // Kullanıcı profili oluştur
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .insert([
+                {
+                    id: user.id,
+                    email: user.email,
+                    full_name: user.user_metadata?.full_name || '',
+                    referral_code: uniqueReferralCode,
+                    referred_by: referredBy,
+                    referral_balance: 0,
+                    total_referrals: 0,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }
+            ])
+            .select()
+            .single();
+        
+        if (profileError) {
+            console.error('Profile creation error:', profileError);
+            throw profileError;
+        }
+        
+        // Eğer referans varsa, referans veren kullanıcının bakiyesini güncelle
+        if (referredBy) {
+            // Referans bonusu: 29 USD'nin %30'u = 8.7 USD
+            const referralBonus = 8.70;
+            
+            // Önce referans verenin mevcut bakiyesini al
+            const { data: referrerData } = await supabase
+                .from('profiles')
+                .select('referral_balance, total_referrals')
+                .eq('id', referredBy)
+                .single();
+            
+            if (referrerData) {
+                // Bakiyeyi güncelle
+                const { error: updateError } = await supabase
+                    .from('profiles')
+                    .update({
+                        referral_balance: (parseFloat(referrerData.referral_balance) || 0) + referralBonus,
+                        total_referrals: (parseInt(referrerData.total_referrals) || 0) + 1,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', referredBy);
+                
+                if (updateError) {
+                    console.error('Referans bonusu güncellenemedi:', updateError);
+                }
+            }
+        }
+        
+        return profile;
+    } catch (error) {
+        console.error('Profil oluşturma hatası:', error);
+        throw error;
+    }
+}
+
+// Kullanıcının referral bilgilerini getir
+export async function getUserReferralInfo(userId) {
+    try {
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('referral_code, referral_balance, total_referrals, full_name')
+            .eq('id', userId)
+            .single();
+        
+        if (error) throw error;
+        return profile;
+    } catch (error) {
+        console.error('Referral info get error:', error);
+        return null;
+    }
+}
+
+// ==================== UTILITY FUNCTIONS ====================
+
+// Bildirim gösterme fonksiyonu
+export function showNotification(message, type = 'info') {
+    if (typeof document === 'undefined') return;
+    
+    // Notification container oluştur veya bul
+    let container = document.getElementById('notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notification-container';
+        container.style.position = 'fixed';
+        container.style.top = '20px';
+        container.style.right = '20px';
+        container.style.zIndex = '9999';
+        document.body.appendChild(container);
+    }
+    
+    // Notification elementi oluştur
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.style.cssText = `
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        color: white;
+        font-weight: 500;
+        min-width: 300px;
+        max-width: 400px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    // Renkleri ayarla
+    if (type === 'success') {
+        notification.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+    } else if (type === 'error') {
+        notification.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+    } else if (type === 'warning') {
+        notification.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+    } else {
+        notification.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
+    }
+    
+    notification.textContent = message;
+    container.appendChild(notification);
+    
+    // Otomatik kaldır
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    container.removeChild(notification);
+                }
+            }, 300);
+        }
+    }, 3000);
+    
+    // Animasyon CSS'i ekle
+    if (!document.getElementById('notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notification-styles';
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// Modal gizleme fonksiyonu
+export function hideModal(modalId) {
+    if (typeof document === 'undefined') return;
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Modal gösterme fonksiyonu
+export function showModal(modalId) {
+    if (typeof document === 'undefined') return;
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+// ==================== EXISTING CODE - DO NOT MODIFY ====================
+
 // Modal fonksiyonları - product-detail.js'ye ekle
 function setupModal() {
   // Modal kapatma
@@ -115,14 +361,6 @@ function setupModal() {
   }
 }
 
-// Modal gizleme fonksiyonu
-function hideModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (modal) {
-    modal.classList.remove('active');
-  }
-}
-
 // Sayfa yüklendiğinde modal setup'ını da çağır
 document.addEventListener('DOMContentLoaded', function() {
   console.log('🚀 Product Detail yüklendi');
@@ -133,4 +371,3 @@ document.addEventListener('DOMContentLoaded', function() {
     setupModal(); // Modal setup'ını ekledik
   }
 });
-
