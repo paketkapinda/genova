@@ -527,7 +527,7 @@
     <!-- SONRA supabaseClient.js -->
     <script type="module" src="/assets/js/supabaseClient.js"></script>
 
-    <script type="module">
+<script type="module">
   // Tab Management
   const tabButtons = document.querySelectorAll('.tab-button');
   const tabContents = document.querySelectorAll('.tab-content');
@@ -535,12 +535,10 @@
   const switchToLogin = document.querySelector('#switch-to-login');
 
   function switchTab(tabName) {
-    // Update tab buttons
     tabButtons.forEach(button => {
       button.classList.toggle('active', button.dataset.tab === tabName);
     });
     
-    // Update tab contents
     tabContents.forEach(content => {
       content.classList.toggle('active', content.id === `${tabName}-tab`);
     });
@@ -576,7 +574,6 @@
     forgotPasswordModal.classList.remove('active');
   });
 
-  // Close modal when clicking outside
   forgotPasswordModal.addEventListener('click', (e) => {
     if (e.target === forgotPasswordModal) {
       forgotPasswordModal.classList.remove('active');
@@ -588,7 +585,6 @@
     const container = document.querySelector('#message-container');
     container.innerHTML = `<div class="message ${type}">${message}</div>`;
     
-    // Auto-hide success messages after 5 seconds
     if (type === 'success') {
       setTimeout(() => {
         container.innerHTML = '';
@@ -608,21 +604,19 @@
     }
   }
 
-  // Import supabase ve referans fonksiyonları
+  // Import supabase
   import('/assets/js/supabaseClient.js')
-  .then(({ supabase, getReferralCodeFromURL, getOrCreateUserProfile, showNotification }) => {
+    .then(({ supabase, getReferralCodeFromURL, createProfileWithReferral }) => {
       console.log('✅ Supabase client yüklendi');
       
       // Referans kodunu URL'den al
       const referralCode = getReferralCodeFromURL();
-      console.log('Referans kodu:', referralCode);
       
-      // Eğer referans kodu varsa, gizli input'a ekle
+      // Gizli input'a referans kodunu ekle
       if (referralCode) {
         const referralInput = document.getElementById('referral-code');
         if (referralInput) {
           referralInput.value = referralCode;
-          console.log(`Referans kodu input'a eklendi: ${referralCode}`);
         }
       }
 
@@ -663,84 +657,70 @@
       });
 
       // Sign Up Form
-const signupForm = document.querySelector('#signup-form');
-signupForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const fullName = document.querySelector('#signup-fullname').value.trim();
-    const email = document.querySelector('#signup-email').value.trim();
-    const password = document.querySelector('#signup-password').value;
-    const confirmPassword = document.querySelector('#signup-confirm-password').value;
-    
-    // Gizli referans input'unu al
-    const referralInput = document.getElementById('referral-code');
-    const referralCode = referralInput ? referralInput.value : null;
-    
-    console.log('Kayıt için referans kodu:', referralCode);
-    
-    if (password !== confirmPassword) {
-        showMessage('Passwords do not match', 'error');
-        return;
-    }
-    
-    const submitBtn = signupForm.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<div class="loading-spinner"></div>';
-    
-    try {
-        // 1. Kullanıcıyı oluştur
-        const { data: authData, error: authError } = await supabase.auth.signUp({ 
+      const signupForm = document.querySelector('#signup-form');
+      signupForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const fullName = document.querySelector('#signup-fullname').value.trim();
+        const email = document.querySelector('#signup-email').value.trim();
+        const password = document.querySelector('#signup-password').value;
+        const confirmPassword = document.querySelector('#signup-confirm-password').value;
+        
+        // Referans kodunu al
+        const referralInput = document.getElementById('referral-code');
+        const referralCode = referralInput ? referralInput.value : null;
+        
+        if (password !== confirmPassword) {
+          showMessage('Passwords do not match', 'error');
+          return;
+        }
+        
+        const submitBtn = signupForm.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<div class="loading-spinner"></div>';
+        
+        try {
+          // Kullanıcıyı oluştur
+          const { data: authData, error: authError } = await supabase.auth.signUp({ 
             email, 
             password,
             options: {
-                data: {
-                    full_name: fullName
-                }
+              data: {
+                full_name: fullName
+              }
             }
-        });
-        
-        if (authError) {
+          });
+          
+          if (authError) {
             showMessage(authError.message, 'error');
             return;
-        }
-        
-        if (!authData.user) {
-            showMessage('User creation failed. Please try again.', 'error');
-            return;
-        }
-        
-        // 2. Profili oluştur veya güncelle (getOrCreateUserProfile kullan)
-        const profile = await getOrCreateUserProfile(authData.user, referralCode);
-        
-        showMessage('Account created successfully! Please check your email for verification.', 'success');
-        signupForm.reset();
-        
-        // 3. Referans bonusu mesajı göster
-        if (referralCode) {
+          }
+          
+          // Profili referans ile oluştur
+          const profile = await createProfileWithReferral(authData.user, referralCode);
+          
+          showMessage('Account created successfully! Please check your email for verification.', 'success');
+          signupForm.reset();
+          
+          // Referans bonusu mesajı
+          if (referralCode) {
             showMessage(`You've been referred by a friend! $8.70 bonus has been credited to their account.`, 'success');
-        }
-        
-        // 4. Login tab'ine geç
-        setTimeout(() => {
+          }
+          
+          setTimeout(() => {
             switchTab('login');
-        }, 3000);
-        
-    } catch (error) {
-        console.error('Kayıt hatası:', error);
-        
-        // Daha spesifik hata mesajları
-        if (error.code === '23505') {
-            showMessage('This email is already registered. Please sign in instead.', 'error');
-        } else {
-            showMessage('An error occurred. Please try again.', 'error');
+          }, 3000);
+          
+        } catch (error) {
+          console.error('Kayıt hatası:', error);
+          showMessage('An error occurred. Please try again.', 'error');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
         }
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
-    }
-});
+      });
 
       // Forgot Password Form
       const forgotPasswordForm = document.querySelector('#forgot-password-form');
@@ -777,8 +757,7 @@ signupForm.addEventListener('submit', async (e) => {
       showMessage('Authentication service unavailable. Please try again later.', 'error');
     });
 
-  // Initialize with login tab active
   switchTab('login');
-</script>
+</script> 
   </body>
 </html>
