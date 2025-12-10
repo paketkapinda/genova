@@ -1291,33 +1291,44 @@
     </div>
   </div>
 
-<script>
-    // Önce supabase değişkenini tanımlayın
+ <script>
+    // Global supabase değişkeni
     let supabase;
-    
-    // Sonra Supabase'i başlatın
-    document.addEventListener('DOMContentLoaded', function() {
-        const supabaseUrl = "https://pywffpqbbrjfcpzigepa.supabase.co";
-        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5d2ZmcHFiYnJqZmNwemlnZXBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxOTEzNDIsImV4cCI6MjA3OTc2NzM0Mn0.ivqA2wj3nS20i8AcKZSec_paQ99qqcw6YaeTZeVV2vo";
-        
-        supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-        
-        // Referral kodu kontrolü
-        const urlParams = new URLSearchParams(window.location.search);
-        const refCode = urlParams.get('ref');
-        if (refCode) {
-          document.getElementById('referralCode').value = refCode;
-          localStorage.setItem('partner_ref_code', refCode);
-        } else {
-          const storedCode = localStorage.getItem('partner_ref_code');
-          if (storedCode) {
-            document.getElementById('referralCode').value = storedCode;
-          }
-        }
 
-        // Partnerleri yükle
-        loadPartners();
+    // DOM yüklendiğinde çalışacak
+    document.addEventListener('DOMContentLoaded', function() {
+      // Supabase bağlantısını başlat
+      initializeSupabase();
+      
+      // Referral kodu kontrolü
+      const urlParams = new URLSearchParams(window.location.search);
+      const refCode = urlParams.get('ref');
+      if (refCode) {
+        document.getElementById('referralCode').value = refCode;
+        localStorage.setItem('partner_ref_code', refCode);
+      } else {
+        const storedCode = localStorage.getItem('partner_ref_code');
+        if (storedCode) {
+          document.getElementById('referralCode').value = storedCode;
+        }
+      }
+
+      // Partnerleri yükle
+      loadPartners();
     });
+
+    // Supabase'i başlat
+    function initializeSupabase() {
+      const supabaseUrl = "https://pywffpqbbrjfcpzigepa.supabase.co";
+      const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5d2ZmcHFiYnJqZmNwemlnZXBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxOTEzNDIsImV4cCI6MjA3OTc2NzM0Mn0.ivqA2wj3nS20i8AcKZSec_paQ99qqcw6YaeTZeVV2vo";
+      
+      // Supabase'i başlat
+      supabase = window.supabase ? window.supabase.createClient(supabaseUrl, supabaseKey) : null;
+      
+      if (!supabase) {
+        console.error('Supabase başlatılamadı. CDN yüklenmiş mi kontrol edin.');
+      }
+    }
 
     // Language switching
     function switchLanguage(lang) {
@@ -1359,8 +1370,12 @@
 
     async function openDetailModal(partnerId) {
       try {
+        if (!supabase) {
+          throw new Error('Supabase bağlantısı kurulamadı');
+        }
+
         // Partner detaylarını Supabase'den çek
-        const { data: partner, error } = await supabaseClient
+        const { data: partner, error } = await supabase
           .from('partners')
           .select('*')
           .eq('id', partnerId)
@@ -1441,8 +1456,12 @@
       }
 
       try {
+        if (!supabase) {
+          throw new Error('Supabase bağlantısı kurulamadı');
+        }
+
         // Supabase'e başvuruyu kaydet
-        const { data, error } = await supabaseClient
+        const { data, error } = await supabase
           .from('partner_applications')
           .insert([
             {
@@ -1487,7 +1506,11 @@
         const container = document.getElementById('partnersContainer');
         container.innerHTML = '<div class="loading-partners" data-lang="tr">Partnerler yükleniyor...</div><div class="loading-partners" data-lang="en" style="display: none;">Loading partners...</div>';
 
-        const { data: partners, error } = await supabaseClient
+        if (!supabase) {
+          throw new Error('Supabase bağlantısı kurulamadı');
+        }
+
+        const { data: partners, error } = await supabase
           .from('partners')
           .select('*')
           .eq('active', true)
@@ -1497,12 +1520,18 @@
 
         container.innerHTML = '';
         
+        if (!partners || partners.length === 0) {
+          container.innerHTML = '<div class="no-partners" data-lang="tr">Henüz partner eklenmemiş.</div><div class="no-partners" data-lang="en" style="display: none;">No partners added yet.</div>';
+          return;
+        }
+        
         partners.forEach(partner => {
           const card = document.createElement('div');
           card.className = 'partner-card';
           
-          const benefits = JSON.parse(partner.benefits || '[]');
-          const firstBenefit = benefits[0] || '';
+          // Güvenli string işleme
+          const safeName = partner.name.replace(/'/g, "\\'");
+          const safeAffiliateLink = (partner.affiliate_link || '').replace(/'/g, "\\'");
           
           card.innerHTML = `
             <div class="partner-header">
@@ -1514,20 +1543,20 @@
                 </div>`}
               <div>
                 <h3>${partner.name}</h3>
-                <span style="font-size: 12px; color: var(--gray-500);">${partner.category}</span>
+                <span style="font-size: 12px; color: var(--gray-500);">${partner.category || ''}</span>
               </div>
             </div>
-            <p style="margin-bottom: 16px;">${partner.short_description}</p>
+            <p style="margin-bottom: 16px;">${partner.short_description || ''}</p>
             <div style="margin-bottom: 16px;">
               <span style="background: #fef3f2; color: #ea580c; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">
-                ${partner.commission_rate}
+                ${partner.commission_rate || ''}
               </span>
             </div>
             <div style="margin-top: 16px;">
               <button class="btn btn-secondary" onclick="openDetailModal(${partner.id})" style="margin-right: 8px;" data-lang="tr">Detay Göster</button>
               <button class="btn btn-secondary" onclick="openDetailModal(${partner.id})" style="margin-right: 8px; display: none;" data-lang="en">Details</button>
-              <button class="btn btn-primary" onclick="openApplyModal(${partner.id}, '${partner.affiliate_link}', '${partner.name}')" data-lang="tr">Başvur</button>
-              <button class="btn btn-primary" onclick="openApplyModal(${partner.id}, '${partner.affiliate_link}', '${partner.name}')" data-lang="en" style="display: none;">Apply</button>
+              <button class="btn btn-primary" onclick="openApplyModal(${partner.id}, '${safeAffiliateLink}', '${safeName}')" data-lang="tr">Başvur</button>
+              <button class="btn btn-primary" onclick="openApplyModal(${partner.id}, '${safeAffiliateLink}', '${safeName}')" data-lang="en" style="display: none;">Apply</button>
             </div>
           `;
           
@@ -1552,31 +1581,19 @@
       }
     }
 
-    // Check for referral code in URL
-    document.addEventListener('DOMContentLoaded', function() {
-      // Referral kodu kontrolü
-      const urlParams = new URLSearchParams(window.location.search);
-      const refCode = urlParams.get('ref');
-      if (refCode) {
-        document.getElementById('referralCode').value = refCode;
-        localStorage.setItem('partner_ref_code', refCode);
-      } else {
-        const storedCode = localStorage.getItem('partner_ref_code');
-        if (storedCode) {
-          document.getElementById('referralCode').value = storedCode;
-        }
-      }
-
-      // Partnerleri yükle
-      loadPartners();
-    });
-
     // Close modal when clicking outside
     window.onclick = function(event) {
       if (event.target.classList.contains('modal')) {
         event.target.style.display = 'none';
       }
     }
+
+    // Global fonksiyonları window objesine ekle
+    window.switchLanguage = switchLanguage;
+    window.openApplyModal = openApplyModal;
+    window.openDetailModal = openDetailModal;
+    window.closeModal = closeModal;
+    window.submitApplication = submitApplication;
   </script>
 </body>
 </html>
