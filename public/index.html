@@ -1287,13 +1287,33 @@
     </div>
   </div>
 
-   <script>
-    // Supabase bağlantısı
-    const supabaseUrl = "https://pywffpqbbrjfcpzigepa.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5d2ZmcHFiYnJqZmNwemlnZXBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxOTEzNDIsImV4cCI6MjA3OTc2NzM0Mn0.ivqA2wj3nS20i8AcKZSec_paQ99qqcw6YaeTZeVV2vo";
+<script>
+    // Önce supabase değişkenini tanımlayın
+    let supabase;
     
-    // window.supabase kullanın veya farklı bir değişken adı kullanın
-    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+    // Sonra Supabase'i başlatın
+    document.addEventListener('DOMContentLoaded', function() {
+        const supabaseUrl = "https://pywffpqbbrjfcpzigepa.supabase.co";
+        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5d2ZmcHFiYnJqZmNwemlnZXBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxOTEzNDIsImV4cCI6MjA3OTc2NzM0Mn0.ivqA2wj3nS20i8AcKZSec_paQ99qqcw6YaeTZeVV2vo";
+        
+        supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        // Referral kodu kontrolü
+        const urlParams = new URLSearchParams(window.location.search);
+        const refCode = urlParams.get('ref');
+        if (refCode) {
+          document.getElementById('referralCode').value = refCode;
+          localStorage.setItem('partner_ref_code', refCode);
+        } else {
+          const storedCode = localStorage.getItem('partner_ref_code');
+          if (storedCode) {
+            document.getElementById('referralCode').value = storedCode;
+          }
+        }
+
+        // Partnerleri yükle
+        loadPartners();
+    });
 
     // Language switching
     function switchLanguage(lang) {
