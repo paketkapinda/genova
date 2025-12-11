@@ -662,21 +662,10 @@
     <!-- JavaScript Import -->
     <script src="js/payment.js"></script>
     
+    <!-- Sadece temel kontrol -->
     <script>
-      // Sadece temel kontrol yapın
       document.addEventListener('DOMContentLoaded', function() {
-        console.log('🚀 Payments page loaded');
-        
-        // Boş durumu kontrol et
-        setTimeout(() => {
-          const tableBody = document.getElementById('paymentsTableBody');
-          if (tableBody && tableBody.children.length === 0) {
-            const emptyState = document.getElementById('paymentsEmptyState');
-            if (emptyState) {
-              emptyState.classList.remove('hidden');
-            }
-          }
-        }, 1000);
+        console.log('Payments page loaded');
       });
     </script>
   </body>
