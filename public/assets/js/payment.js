@@ -713,6 +713,117 @@ window.processAllPayouts = async function() {
         hideLoading();
     }
 };
+
+// DOM yüklendiğinde event listener'ları kur
+document.addEventListener('DOMContentLoaded', function() {
+    // Etsy Sync butonu
+    const etsySyncBtn = document.getElementById('etsySyncBtn');
+    if (etsySyncBtn) {
+        etsySyncBtn.addEventListener('click', function() {
+            syncEtsyPayments().then(() => loadPayments());
+        });
+    }
+    
+    // Process Payouts butonu
+    const processBtn = document.getElementById('btn-process-payouts');
+    if (processBtn) {
+        processBtn.addEventListener('click', function() {
+            // processAllPayouts fonksiyonu yoksa alternatif
+            if (typeof processAllPayouts === 'function') {
+                processAllPayouts();
+            } else {
+                showNotification('Processing all pending payments...', 'info');
+                // Bekleyen tüm ödemeleri işle
+                const pendingPayments = allPayments.filter(p => p.status === 'pending');
+                if (pendingPayments.length > 0) {
+                    pendingPayments.forEach(payment => {
+                        processPayment(payment.id);
+                    });
+                }
+            }
+        });
+    }
+    
+    // Export butonu
+    const exportBtn = document.getElementById('exportPayments');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', function() {
+            if (typeof exportPaymentsToCSV === 'function') {
+                exportPaymentsToCSV();
+            }
+        });
+    }
+    
+    // Arama input'u
+    const searchInput = document.getElementById('searchPayments');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            searchPayments(this.value);
+        });
+    }
+    
+    // Tarih filtresi
+    const dateFilter = document.getElementById('dateFilter');
+    if (dateFilter) {
+        dateFilter.addEventListener('change', function() {
+            filterPaymentsByDate(this.value);
+        });
+    }
+    
+    // Initial sync butonu
+    const initialSyncBtn = document.getElementById('btn-initial-sync');
+    if (initialSyncBtn) {
+        initialSyncBtn.addEventListener('click', function() {
+            syncEtsyPayments().then(() => loadPayments());
+        });
+    }
+    
+    // Tablo gövdesi yoksa oluştur
+    const table = document.getElementById('paymentsTable');
+    if (table && !table.querySelector('tbody')) {
+        const tbody = document.createElement('tbody');
+        tbody.id = 'paymentsTableBody';
+        table.appendChild(tbody);
+    }
+});
+
+// Eksik global fonksiyonları tanımla
+if (typeof window.syncAllPayments === 'undefined') {
+    window.syncAllPayments = syncEtsyPayments;
+}
+
+if (typeof window.processAllPayouts === 'undefined') {
+    window.processAllPayouts = function() {
+        showNotification('Processing all payouts...', 'info');
+        const pendingPayments = allPayments.filter(p => p.status === 'pending');
+        if (pendingPayments.length === 0) {
+            showNotification('No pending payments to process.', 'info');
+            return;
+        }
+        
+        if (confirm(`Process ${pendingPayments.length} pending payments?`)) {
+            pendingPayments.forEach(payment => {
+                processPayment(payment.id);
+            });
+        }
+    };
+}
+
+if (typeof window.exportPaymentsToCSV === 'undefined') {
+    window.exportPaymentsToCSV = exportPaymentsToCSV;
+}
+
+if (typeof window.filterPaymentsByDate === 'undefined') {
+    window.filterPaymentsByDate = filterPaymentsByDate;
+}
+
+if (typeof window.searchPayments === 'undefined') {
+    window.searchPayments = searchPayments;
+}
+
+if (typeof window.loadPayments === 'undefined') {
+    window.loadPayments = loadPayments;
+}
 window.searchPayments = searchPayments;
 window.filterPaymentsByDate = filterPaymentsByDate;
 window.exportPaymentsToCSV = exportPaymentsToCSV;
