@@ -1,5 +1,5 @@
 // Canvas-based mockup editor for design overlay and multi-angle generation
-//mockup-editor.js
+// mockup-editor.js
 
 import { api } from './api.js';
 import { showNotification } from './ui.js';
@@ -206,6 +206,7 @@ async function generateMockups() {
     showNotification('Failed to generate mockups', 'error');
   }
 }
+
 
 
 
