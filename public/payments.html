@@ -662,59 +662,21 @@
     <!-- JavaScript Import -->
     <script src="js/payment.js"></script>
     
-    <script type="module">
-      // Payments sayfası yüklendiğinde ödemeleri getir
+    <script>
+      // Sadece temel kontrol yapın
       document.addEventListener('DOMContentLoaded', function() {
         console.log('🚀 Payments page loaded');
         
-        // Buton event listener'larını başlat
-        const etsySyncBtn = document.getElementById('etsySyncBtn');
-        const processBtn = document.getElementById('btn-process-payouts');
-        const exportBtn = document.getElementById('exportPayments');
-        const searchInput = document.getElementById('searchPayments');
-        const dateFilter = document.getElementById('dateFilter');
-        const initialSyncBtn = document.getElementById('btn-initial-sync');
-        
-        if (etsySyncBtn) {
-          etsySyncBtn.addEventListener('click', function() {
-            window.syncAllPayments();
-          });
-        }
-        
-        if (processBtn) {
-          processBtn.addEventListener('click', function() {
-            window.processAllPayouts();
-          });
-        }
-        
-        if (exportBtn) {
-          exportBtn.addEventListener('click', function() {
-            window.exportPaymentsToCSV();
-          });
-        }
-        
-        if (searchInput) {
-          searchInput.addEventListener('input', function() {
-            window.searchPayments(this.value);
-          });
-        }
-        
-        if (dateFilter) {
-          dateFilter.addEventListener('change', function() {
-            window.filterPaymentsByDate(this.value);
-          });
-        }
-        
-        if (initialSyncBtn) {
-          initialSyncBtn.addEventListener('click', function() {
-            window.syncAllPayments();
-          });
-        }
-        
-        // Ödemeleri yükle
-        if (typeof loadPayments === 'function') {
-          loadPayments();
-        }
+        // Boş durumu kontrol et
+        setTimeout(() => {
+          const tableBody = document.getElementById('paymentsTableBody');
+          if (tableBody && tableBody.children.length === 0) {
+            const emptyState = document.getElementById('paymentsEmptyState');
+            if (emptyState) {
+              emptyState.classList.remove('hidden');
+            }
+          }
+        }, 1000);
       });
     </script>
   </body>
