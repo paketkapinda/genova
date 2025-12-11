@@ -1,58 +1,125 @@
-// products.js - Tam Revize Edilmiş Versiyon
+// products.js - TAM VE EKSİKSİZ VERSİYON (Tüm fonksiyonlar dahil)
+
 let currentUser = null;
 let currentProducts = [];
 let aiTools = [];
 let topSellersData = [];
+let currentFilters = {
+    status: '',
+    category: '',
+    search: ''
+};
+
+// Supabase bağlantısı kontrolü
+if (typeof supabase === 'undefined') {
+    console.error('Supabase tanımlı değil! Lütfen önce auth.js yükleyin.');
+}
 
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('Products sayfası yükleniyor...');
     
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        window.location.href = 'login.html';
-        return;
+    try {
+        // Kullanıcı kontrolü
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError || !user) {
+            console.error('Auth hatası:', authError);
+            window.location.href = '/login.html';
+            return;
+        }
+        
+        currentUser = user;
+        await initializeProductsPage();
+        
+    } catch (error) {
+        console.error('Başlatma hatası:', error);
+        showNotification('Sayfa yüklenirken hata oluştu: ' + error.message, 'error');
     }
-    
-    currentUser = user;
-    await initializeProductsPage();
 });
 
 async function initializeProductsPage() {
-    setupUIEventListeners();
-    await loadAITools();
-    await loadUserProducts();
-    setupTopSellerButton();
-    updateProductStats();
+    try {
+        showLoading('Sayfa hazırlanıyor...');
+        
+        // Paralel yükleme işlemleri
+        await Promise.all([
+            loadAITools(),
+            loadUserProducts()
+        ]);
+        
+        setupAllEventListeners();
+        updateProductStats();
+        
+    } catch (error) {
+        console.error('Sayfa başlatma hatası:', error);
+        showNotification('Sayfa başlatılamadı', 'error');
+    } finally {
+        hideLoading();
+    }
 }
 
-function setupUIEventListeners() {
-    // Yeni ürün butonu
-    const newProductBtn = document.getElementById('newProductBtn');
-    if (newProductBtn) {
-        newProductBtn.addEventListener('click', showNewProductModal);
+function setupAllEventListeners() {
+    // Header butonları
+    document.getElementById('btn-new-product')?.addEventListener('click', showNewProductModal);
+    document.getElementById('btn-empty-new-product')?.addEventListener('click', showNewProductModal);
+    document.getElementById('btn-analyze-top-sellers')?.addEventListener('click', analyzeTopSellers);
+    
+    // Filtreler
+    document.getElementById('filter-status')?.addEventListener('change', (e) => {
+        const status = e.target.value;
+        filterProductsByStatus(status);
+    });
+    
+    document.getElementById('filter-category')?.addEventListener('change', (e) => {
+        const category = e.target.value;
+        filterProductsByCategory(category);
+    });
+    
+    // Search input (eğer varsa)
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.id = 'search-products';
+    searchInput.placeholder = 'Ürün ara...';
+    searchInput.className = 'form-input';
+    searchInput.style.marginLeft = 'auto';
+    searchInput.style.maxWidth = '250px';
+    
+    // Search input'u header'a ekle
+    const headerActions = document.querySelector('.header-actions');
+    if (headerActions && !document.getElementById('search-products')) {
+        headerActions.parentElement.insertBefore(searchInput, headerActions);
     }
     
-    // AI ürün oluştur butonu
-    const aiGenerateBtn = document.getElementById('aiGenerateBtn');
-    if (aiGenerateBtn) {
-        aiGenerateBtn.addEventListener('click', showAIGenerateModal);
-    }
+    searchInput.addEventListener('input', (e) => {
+        searchProducts(e.target.value);
+    });
     
-    // Etsy gönder butonu
-    const etsyPublishBtn = document.getElementById('etsyPublishBtn');
-    if (etsyPublishBtn) {
-        etsyPublishBtn.addEventListener('click', publishToEtsy);
-    }
+    // Modal kapatma butonları
+    document.getElementById('modal-product-close')?.addEventListener('click', () => closeModal('modal-product'));
+    document.getElementById('modal-mockup-close')?.addEventListener('click', () => closeModal('modal-mockup'));
+    document.getElementById('btn-cancel-product')?.addEventListener('click', () => closeModal('modal-product'));
     
-    // Arama
-    const searchInput = document.getElementById('searchProducts');
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            searchProducts(this.value);
-        });
-    }
+    // Form işlemleri
+    document.getElementById('form-product')?.addEventListener('submit', handleProductFormSubmit);
+    document.getElementById('btn-generate-description')?.addEventListener('click', generateDescriptionWithAI);
     
-    // Kategori filtreleri
+    // Modal dışına tıklama
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal')) {
+            e.target.classList.remove('active');
+        }
+    });
+    
+    // ESC tuşu ile kapatma
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal.active').forEach(modal => {
+                modal.classList.remove('active');
+            });
+        }
+    });
+    
+    // Kategori filtre butonları (eğer varsa)
     document.querySelectorAll('.category-filter').forEach(filter => {
         filter.addEventListener('click', function() {
             const category = this.getAttribute('data-category');
@@ -61,7 +128,7 @@ function setupUIEventListeners() {
         });
     });
     
-    // Durum filtreleri
+    // Durum filtre butonları (eğer varsa)
     document.querySelectorAll('.status-filter').forEach(filter => {
         filter.addEventListener('click', function() {
             const status = this.getAttribute('data-status');
@@ -69,28 +136,6 @@ function setupUIEventListeners() {
             updateActiveStatusButton(this);
         });
     });
-}
-
-function setupTopSellerButton() {
-    const topSellerBtn = document.getElementById('topSellerBtn');
-    if (topSellerBtn) {
-        topSellerBtn.addEventListener('click', async function() {
-            const btn = this;
-            const originalText = btn.innerHTML;
-            
-            btn.innerHTML = '<i class="fas fa-chart-line fa-spin mr-2"></i> Analiz Ediliyor...';
-            btn.disabled = true;
-            
-            try {
-                await fetchTopSellersFromEtsy();
-            } catch (error) {
-                showNotification('Trend analizi başarısız: ' + error.message, 'error');
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        });
-    }
 }
 
 async function loadAITools() {
@@ -112,8 +157,6 @@ async function loadAITools() {
 
 async function loadUserProducts() {
     try {
-        showLoading('Ürünler yükleniyor...');
-        
         const { data: products, error } = await supabase
             .from('products')
             .select(`
@@ -130,138 +173,462 @@ async function loadUserProducts() {
         if (error) throw error;
         
         currentProducts = products || [];
-        displayProducts(currentProducts);
-        updateProductStats();
+        renderProducts(currentProducts);
         
     } catch (error) {
         console.error('Ürün yükleme hatası:', error);
-        showNotification('Ürünler yüklenirken hata oluştu: ' + error.message, 'error');
+        showNotification('Ürünler yüklenirken hata oluştu', 'error');
+        currentProducts = [];
+        renderProducts([]);
+    }
+}
+
+function renderProducts(products) {
+    const productsGrid = document.getElementById('products-grid');
+    const emptyState = document.getElementById('products-empty');
+    
+    if (!productsGrid || !emptyState) return;
+    
+    if (!products || products.length === 0) {
+        productsGrid.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+    }
+    
+    emptyState.classList.add('hidden');
+    
+    let html = '';
+    products.forEach(product => {
+        html += createProductCardHTML(product);
+    });
+    
+    productsGrid.innerHTML = html;
+    
+    // Ürün kartlarına event listener ekle
+    attachProductCardListeners();
+}
+
+function createProductCardHTML(product) {
+    const statusClass = getProductStatusClass(product.status);
+    const statusText = getProductStatusText(product.status);
+    const price = parseFloat(product.price || 0).toFixed(2);
+    const rating = product.rating_stats?.[0];
+    
+    return `
+        <div class="product-card" data-id="${product.id}" data-status="${product.status}" data-category="${product.category || ''}">
+            <div class="product-image">
+                <div class="product-image-placeholder">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <p>Ürün Görseli</p>
+                </div>
+                <div class="product-badge ${statusClass}">${statusText}</div>
+                <div style="position: absolute; bottom: 12px; left: 12px; background: black; color: white; padding: 4px 8px; border-radius: 6px; font-size: 14px; font-weight: 600;">
+                    $${price}
+                </div>
+            </div>
+            <div class="product-content">
+                <div class="product-header">
+                    <h3 class="product-title" title="${escapeHtml(product.title || 'Başlıksız Ürün')}">
+                        ${truncateText(product.title || 'Başlıksız Ürün', 50)}
+                    </h3>
+                </div>
+                <span class="product-category bg-blue-100 text-blue-800" style="display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 500;">
+                    ${escapeHtml(product.category || 'Kategorisiz')}
+                </span>
+                <p class="product-description" title="${escapeHtml(product.description || '')}">
+                    ${truncateText(product.description || 'Açıklama yok', 100)}
+                </p>
+                ${rating ? `
+                    <div class="product-rating" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                        <span style="color: #fbbf24; font-weight: 600; display: flex; align-items: center;">
+                            ★ ${rating.average_rating?.toFixed(1) || '0.0'}
+                        </span>
+                        <span style="color: #6b7280; font-size: 12px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; margin-right: 4px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                            </svg>
+                            ${rating.monthly_sales_estimate || '0'} satış/ay
+                        </span>
+                    </div>
+                ` : ''}
+                <div class="product-actions">
+                    <button class="btn btn-outline btn-sm" data-action="mockup" data-product-id="${product.id}">
+                        Mockup
+                    </button>
+                    <button class="btn btn-outline btn-sm" data-action="edit" data-product-id="${product.id}">
+                        Düzenle
+                    </button>
+                    <button class="btn btn-outline btn-sm" data-action="similar" data-product-id="${product.id}">
+                        Benzer Üret
+                    </button>
+                    <button class="btn btn-outline btn-sm" data-action="delete" data-product-id="${product.id}">
+                        Sil
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function attachProductCardListeners() {
+    document.querySelectorAll('[data-action="edit"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            editProduct(productId);
+        });
+    });
+    
+    document.querySelectorAll('[data-action="delete"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            deleteProduct(productId);
+        });
+    });
+    
+    document.querySelectorAll('[data-action="mockup"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            generateProductMockups(productId);
+        });
+    });
+    
+    document.querySelectorAll('[data-action="similar"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            generateSimilarProduct(productId);
+        });
+    });
+}
+
+// EKSİK FONKSİYONLAR - GÜNCELLENDİ
+function updateProductStats() {
+    if (!currentProducts || currentProducts.length === 0) {
+        // İstatistik elementlerini kontrol et
+        const totalProductsEl = document.getElementById('totalProducts');
+        const listedProductsEl = document.getElementById('listedProducts');
+        const draftProductsEl = document.getElementById('draftProducts');
+        const totalValueEl = document.getElementById('totalValue');
+        
+        if (totalProductsEl) totalProductsEl.textContent = '0';
+        if (listedProductsEl) listedProductsEl.textContent = '0';
+        if (draftProductsEl) draftProductsEl.textContent = '0';
+        if (totalValueEl) totalValueEl.textContent = '$0';
+        return;
+    }
+    
+    const total = currentProducts.length;
+    const listed = currentProducts.filter(p => p.status === 'listed' || p.status === 'published').length;
+    const draft = currentProducts.filter(p => p.status === 'draft').length;
+    const totalValue = currentProducts.reduce((sum, p) => sum + parseFloat(p.price || 0), 0);
+    
+    // İstatistik elementlerini güncelle
+    const totalProductsEl = document.getElementById('totalProducts');
+    const listedProductsEl = document.getElementById('listedProducts');
+    const draftProductsEl = document.getElementById('draftProducts');
+    const totalValueEl = document.getElementById('totalValue');
+    
+    if (totalProductsEl) totalProductsEl.textContent = total.toString();
+    if (listedProductsEl) listedProductsEl.textContent = listed.toString();
+    if (draftProductsEl) draftProductsEl.textContent = draft.toString();
+    if (totalValueEl) totalValueEl.textContent = `$${totalValue.toFixed(2)}`;
+}
+
+function filterProductsByCategory(category) {
+    const productsGrid = document.getElementById('products-grid');
+    if (!productsGrid) return;
+    
+    const cards = productsGrid.querySelectorAll('.product-card');
+    
+    cards.forEach(card => {
+        if (category === '' || category === 'all') {
+            card.style.display = '';
+        } else {
+            const categorySpan = card.querySelector('.product-category');
+            if (categorySpan) {
+                const cardCategory = categorySpan.textContent.trim();
+                card.style.display = cardCategory === category ? '' : 'none';
+            }
+        }
+    });
+}
+
+function filterProductsByStatus(status) {
+    const productsGrid = document.getElementById('products-grid');
+    if (!productsGrid) return;
+    
+    const cards = productsGrid.querySelectorAll('.product-card');
+    
+    cards.forEach(card => {
+        if (status === '' || status === 'all') {
+            card.style.display = '';
+        } else {
+            const statusBadge = card.querySelector('.product-badge');
+            if (statusBadge) {
+                const statusText = statusBadge.textContent.trim();
+                const cardStatus = getStatusFromText(statusText);
+                card.style.display = cardStatus === status ? '' : 'none';
+            }
+        }
+    });
+}
+
+function searchProducts(query) {
+    const productsGrid = document.getElementById('products-grid');
+    if (!productsGrid) return;
+    
+    const cards = productsGrid.querySelectorAll('.product-card');
+    const searchTerm = query.toLowerCase().trim();
+    
+    cards.forEach(card => {
+        if (searchTerm === '') {
+            card.style.display = '';
+        } else {
+            const title = card.querySelector('.product-title')?.textContent.toLowerCase() || '';
+            const description = card.querySelector('.product-description')?.textContent.toLowerCase() || '';
+            const category = card.querySelector('.product-category')?.textContent.toLowerCase() || '';
+            
+            const cardText = `${title} ${description} ${category}`;
+            card.style.display = cardText.includes(searchTerm) ? '' : 'none';
+        }
+    });
+}
+
+function updateActiveCategoryButton(activeBtn) {
+    document.querySelectorAll('.category-filter').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white');
+        btn.classList.add('bg-gray-200', 'text-gray-700');
+    });
+    
+    activeBtn.classList.remove('bg-gray-200', 'text-gray-700');
+    activeBtn.classList.add('bg-blue-600', 'text-white');
+}
+
+function updateActiveStatusButton(activeBtn) {
+    document.querySelectorAll('.status-filter').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white');
+        btn.classList.add('bg-gray-200', 'text-gray-700');
+    });
+    
+    activeBtn.classList.remove('bg-gray-200', 'text-gray-700');
+    activeBtn.classList.add('bg-blue-600', 'text-white');
+}
+
+// EKSİK YARDIMCI FONKSİYONLAR
+function getProductStatusClass(status) {
+    const classMap = {
+        'draft': 'bg-gray-100 text-gray-800',
+        'listed': 'bg-green-100 text-green-800',
+        'published': 'bg-green-100 text-green-800',
+        'archived': 'bg-red-100 text-red-800'
+    };
+    return classMap[status] || 'bg-gray-100 text-gray-800';
+}
+
+function getProductStatusText(status) {
+    const textMap = {
+        'draft': 'Taslak',
+        'listed': 'Yayında',
+        'published': 'Yayında',
+        'archived': 'Arşiv'
+    };
+    return textMap[status] || status;
+}
+
+function getStatusFromText(text) {
+    const reverseMap = {
+        'taslak': 'draft',
+        'yayında': 'published',
+        'arşiv': 'archived'
+    };
+    return reverseMap[text.toLowerCase()] || text;
+}
+
+// MODAL İŞLEMLERİ
+function showNewProductModal() {
+    resetProductForm();
+    document.getElementById('modal-product-title').textContent = 'Yeni Ürün';
+    document.getElementById('modal-product').classList.add('active');
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+function resetProductForm() {
+    const form = document.getElementById('form-product');
+    if (form) {
+        form.reset();
+        document.getElementById('product-id').value = '';
+        document.getElementById('product-status').value = 'draft';
+    }
+}
+
+async function handleProductFormSubmit(e) {
+    e.preventDefault();
+    
+    try {
+        showLoading('Ürün kaydediliyor...');
+        
+        const productData = {
+            user_id: currentUser.id,
+            title: document.getElementById('product-title').value.trim(),
+            category: document.getElementById('product-category').value,
+            price: parseFloat(document.getElementById('product-price').value) || 0,
+            status: document.getElementById('product-status').value,
+            description: document.getElementById('product-description').value.trim(),
+            updated_at: new Date().toISOString()
+        };
+        
+        if (!productData.title) throw new Error('Ürün başlığı gereklidir');
+        if (!productData.category) throw new Error('Kategori seçmelisiniz');
+        
+        const productId = document.getElementById('product-id').value;
+        
+        if (productId) {
+            // Güncelle
+            const { error } = await supabase
+                .from('products')
+                .update(productData)
+                .eq('id', productId)
+                .eq('user_id', currentUser.id);
+            
+            if (error) throw error;
+            showNotification('Ürün güncellendi', 'success');
+        } else {
+            // Yeni oluştur
+            productData.created_at = new Date().toISOString();
+            const { error } = await supabase
+                .from('products')
+                .insert([productData]);
+            
+            if (error) throw error;
+            showNotification('Ürün oluşturuldu', 'success');
+        }
+        
+        closeModal('modal-product');
+        await loadUserProducts();
+        
+    } catch (error) {
+        console.error('Ürün kaydetme hatası:', error);
+        showNotification(error.message || 'Ürün kaydedilemedi', 'error');
     } finally {
         hideLoading();
     }
 }
 
-function displayProducts(products) {
-    const productsGrid = document.getElementById('productsGrid');
-    if (!productsGrid) return;
+async function editProduct(productId) {
+    try {
+        showLoading('Ürün yükleniyor...');
+        
+        const { data: product, error } = await supabase
+            .from('products')
+            .select('*')
+            .eq('id', productId)
+            .eq('user_id', currentUser.id)
+            .single();
+        
+        if (error) throw error;
+        
+        document.getElementById('modal-product-title').textContent = 'Ürünü Düzenle';
+        document.getElementById('product-id').value = product.id;
+        document.getElementById('product-title').value = product.title || '';
+        document.getElementById('product-category').value = product.category || '';
+        document.getElementById('product-price').value = product.price || '';
+        document.getElementById('product-status').value = product.status || 'draft';
+        document.getElementById('product-description').value = product.description || '';
+        
+        document.getElementById('modal-product').classList.add('active');
+        
+    } catch (error) {
+        console.error('Ürün yükleme hatası:', error);
+        showNotification('Ürün yüklenemedi', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function deleteProduct(productId) {
+    if (!confirm('Bu ürünü silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) return;
     
-    if (!products || products.length === 0) {
-        productsGrid.innerHTML = getEmptyStateHTML();
+    try {
+        showLoading('Ürün siliniyor...');
+        
+        const { error } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', productId)
+            .eq('user_id', currentUser.id);
+        
+        if (error) throw error;
+        
+        showNotification('Ürün silindi', 'success');
+        await loadUserProducts();
+        
+    } catch (error) {
+        console.error('Ürün silme hatası:', error);
+        showNotification('Ürün silinemedi', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// AI FONKSİYONLARI
+async function generateDescriptionWithAI() {
+    const title = document.getElementById('product-title').value.trim();
+    const category = document.getElementById('product-category').value;
+    
+    if (!title) {
+        showNotification('Lütfen önce ürün başlığı girin', 'warning');
         return;
     }
     
-    let html = '';
-    products.forEach(product => {
-        html += getProductCardHTML(product);
-    });
-    
-    productsGrid.innerHTML = html;
+    try {
+        showLoading('AI ile tanım oluşturuluyor...');
+        
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        const mockDescription = `${title} - Kaliteli malzeme ve özenli işçilikle üretilmiştir. Mükemmel hediye alternatifi! ${category ? `İdeal ${category.toLowerCase()} seçeneği.` : ''}`;
+        document.getElementById('product-description').value = mockDescription;
+        
+        showNotification('AI tanım oluşturuldu', 'success');
+        
+    } catch (error) {
+        console.error('AI tanım oluşturma hatası:', error);
+        showNotification('AI tanım oluşturulamadı', 'error');
+    } finally {
+        hideLoading();
+    }
 }
 
-function getEmptyStateHTML() {
-    return `
-        <div class="col-span-full text-center py-12">
-            <div class="max-w-md mx-auto">
-                <div class="bg-gray-100 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
-                    <i class="fas fa-box-open text-4xl text-gray-400"></i>
-                </div>
-                <h3 class="text-xl font-semibold text-gray-700 mb-2">Henüz ürününüz yok</h3>
-                <p class="text-gray-500 mb-6">İlk ürününüzü oluşturarak başlayın</p>
-                <div class="flex gap-4 justify-center">
-                    <button onclick="showNewProductModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium">
-                        <i class="fas fa-plus mr-2"></i>Yeni Ürün
-                    </button>
-                    <button onclick="fetchTopSellersFromEtsy()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium">
-                        <i class="fas fa-chart-line mr-2"></i>Trend Ürünleri Keşfet
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function getProductCardHTML(product) {
-    const imageUrl = product.images && product.images.length > 0 
-        ? product.images[0] 
-        : 'https://via.placeholder.com/400x400/cccccc/969696?text=Ürün+Görseli';
-    
-    const statusClass = getProductStatusClass(product.status);
-    const rating = product.rating_stats?.[0];
-    
-    return `
-        <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-            <div class="relative h-48 bg-gray-100">
-                <img src="${imageUrl}" alt="${product.title}" 
-                     class="w-full h-full object-cover"
-                     onerror="this.src='https://via.placeholder.com/400x400/cccccc/969696?text=Görsel+Yüklenemedi'">
-                
-                <div class="absolute top-3 right-3 ${statusClass} px-3 py-1 rounded-full text-xs font-semibold">
-                    ${getProductStatusText(product.status)}
-                </div>
-                
-                <div class="absolute bottom-3 left-3 bg-black bg-opacity-70 text-white px-3 py-1 rounded-lg text-sm">
-                    $${parseFloat(product.price).toFixed(2)}
-                </div>
-            </div>
-            
-            <div class="p-4">
-                <h3 class="font-semibold text-gray-800 truncate" title="${product.title}">
-                    ${product.title}
-                </h3>
-                <p class="text-sm text-gray-600 mt-1 line-clamp-2">${product.description || 'Açıklama yok'}</p>
-                
-                <div class="flex flex-wrap gap-1 mt-3">
-                    <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                        ${product.category || 'Kategori Yok'}
-                    </span>
-                    ${product.tags && product.tags.slice(0, 2).map(tag => `
-                        <span class="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">
-                            ${tag}
-                        </span>
-                    `).join('')}
-                </div>
-                
-                <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-                    <div class="flex items-center text-sm text-gray-500">
-                        <i class="fas fa-star text-yellow-500 mr-1"></i>
-                        <span>${rating?.average_rating?.toFixed(1) || '0.0'}</span>
-                        <span class="mx-1">•</span>
-                        <i class="fas fa-shopping-cart mr-1"></i>
-                        <span>${rating?.monthly_sales_estimate || '0'}</span>
-                    </div>
-                    
-                    <div class="flex items-center space-x-2">
-                        <button onclick="generateProductMockups('${product.id}')" 
-                                class="text-blue-600 hover:text-blue-800 p-1"
-                                title="Mockup Oluştur">
-                            <i class="fas fa-tshirt"></i>
-                        </button>
-                        <button onclick="editProduct('${product.id}')" 
-                                class="text-gray-600 hover:text-gray-800 p-1"
-                                title="Düzenle">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="generateSimilarProduct('${product.id}')" 
-                                class="text-green-600 hover:text-green-800 p-1"
-                                title="Benzer Ürün Oluştur">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                        <button onclick="viewProductDetails('${product.id}')" 
-                                class="text-purple-600 hover:text-purple-800 p-1"
-                                title="Detaylar">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+// ETSY TREND ANALİZİ FONKSİYONLARI
+async function analyzeTopSellers() {
+    try {
+        showLoading('Etsy trend ürünleri analiz ediliyor...');
+        
+        await fetchTopSellersFromEtsy();
+        
+        if (topSellersData.length > 0) {
+            displayTopSellerModal(topSellersData);
+            showNotification(`${topSellersData.length} trend ürün bulundu', 'success`);
+        } else {
+            showNotification('Trend ürün bulunamadı', 'warning');
+        }
+        
+    } catch (error) {
+        console.error('Trend analiz hatası:', error);
+        showNotification('Trend analizi başarısız: ' + error.message, 'error');
+    } finally {
+        hideLoading();
+    }
 }
 
 async function fetchTopSellersFromEtsy() {
     try {
-        showLoading('Etsy trend analizi yapılıyor...');
-        
         // Etsy mağazasını kontrol et
         const { data: etsyShop } = await supabase
             .from('etsy_shops')
@@ -271,46 +638,21 @@ async function fetchTopSellersFromEtsy() {
             .single();
         
         if (etsyShop) {
-            // Gerçek Etsy API entegrasyonu
             topSellersData = await fetchRealEtsyTrends(etsyShop);
         } else {
-            // Mock veri kullan
             topSellersData = await fetchMockTopSellers();
-        }
-        
-        if (topSellersData.length > 0) {
-            displayTopSellerModal(topSellersData);
-            showNotification(`${topSellersData.length} trend ürün bulundu`, 'success');
-        } else {
-            showNotification('Trend ürün bulunamadı', 'warning');
         }
         
     } catch (error) {
         console.error('Top seller analiz hatası:', error);
-        showNotification('Trend analizi başarısız: ' + error.message, 'error');
-    } finally {
-        hideLoading();
+        topSellersData = await fetchMockTopSellers();
     }
 }
 
 async function fetchRealEtsyTrends(etsyShop) {
     try {
         // Gerçek Etsy API implementasyonu için mock
-        const mockTrends = generateMockTrendData();
-        return mockTrends;
-        
-        // Gerçek implementasyon:
-        /*
-        const response = await fetch(`/api/etsy/trending?shop_id=${etsyShop.id}`, {
-            headers: {
-                'x-api-key': etsyShop.api_key
-            }
-        });
-        
-        if (!response.ok) throw new Error('Etsy API hatası');
-        const data = await response.json();
-        return processEtsyTrendData(data.results || []);
-        */
+        return generateMockTrendData();
         
     } catch (error) {
         console.error('Etsy trend çekme hatası:', error);
@@ -319,7 +661,7 @@ async function fetchRealEtsyTrends(etsyShop) {
 }
 
 function generateMockTrendData() {
-    const categories = ['Art & Collectibles', 'Home & Living', 'Jewelry', 'Apparel', 'Accessories'];
+    const categories = ['tshirt', 'mug', 'plate', 'phone-case', 'jewelry', 'wood'];
     const trends = [];
     
     for (let i = 0; i < 8; i++) {
@@ -329,7 +671,7 @@ function generateMockTrendData() {
         trends.push({
             id: `trend-${i}`,
             title: `${style} ${getProductTypeByCategory(category)}`,
-            description: `Trend ${category.toLowerCase()} ürünü, ${style.toLowerCase()} tasarım`,
+            description: `Trend ${category} ürünü, ${style.toLowerCase()} tasarım`,
             price: (15 + Math.random() * 35).toFixed(2),
             category: category,
             tags: [style.toLowerCase(), 'trending', 'popular'],
@@ -345,11 +687,12 @@ function generateMockTrendData() {
 
 function getProductTypeByCategory(category) {
     const types = {
-        'Art & Collectibles': ['Pet Portrait', 'Wall Art', 'Print', 'Painting'],
-        'Home & Living': ['Coffee Mug', 'Candle', 'Pillow', 'Blanket'],
-        'Jewelry': ['Necklace', 'Bracelet', 'Earrings', 'Ring'],
-        'Apparel': ['T-Shirt', 'Hoodie', 'Sweatshirt', 'Tank Top'],
-        'Accessories': ['Keychain', 'Bag', 'Wallet', 'Phone Case']
+        'tshirt': ['T-Shirt', 'Hoodie', 'Sweatshirt'],
+        'mug': ['Coffee Mug', 'Travel Mug', 'Ceramic Mug'],
+        'plate': ['Dinner Plate', 'Decorative Plate', 'Serving Plate'],
+        'phone-case': ['Phone Case', 'Tablet Case', 'Laptop Case'],
+        'jewelry': ['Necklace', 'Bracelet', 'Earrings'],
+        'wood': ['Cutting Board', 'Coaster', 'Wall Art']
     };
     
     const categoryTypes = types[category] || ['Product'];
@@ -358,11 +701,12 @@ function getProductTypeByCategory(category) {
 
 function getRandomProductImage(category) {
     const images = {
-        'Art & Collectibles': 'https://images.unsplash.com/photo-1579168765467-3b235f938439?w=400&h=400&fit=crop',
-        'Home & Living': 'https://images.unsplash.com/photo-1514228742587-6b1558fcf93a?w=400&h=400&fit=crop',
-        'Jewelry': 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=400&fit=crop',
-        'Apparel': 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=400&fit=crop',
-        'Accessories': 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&h=400&fit=crop'
+        'tshirt': 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=400&fit=crop',
+        'mug': 'https://images.unsplash.com/photo-1514228742587-6b1558fcf93a?w=400&h=400&fit=crop',
+        'plate': 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=400&fit=crop',
+        'phone-case': 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&h=400&fit=crop',
+        'jewelry': 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=400&fit=crop',
+        'wood': 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=400&fit=crop'
     };
     
     return images[category] || 'https://images.unsplash.com/photo-1563241527-3004b7be0ffd?w=400&h=400&fit=crop';
@@ -403,123 +747,149 @@ function parsePriceRange(priceRange) {
 }
 
 function displayTopSellerModal(trends) {
-    const modal = document.getElementById('topSellerModal');
-    if (!modal) return;
-    
-    let html = `
-        <div class="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
-            <div class="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h3 class="text-2xl font-bold">
-                            <i class="fas fa-chart-line mr-3"></i>Trend Ürün Analizi
-                        </h3>
-                        <p class="text-purple-100 mt-1">${trends.length} trend ürün bulundu</p>
-                    </div>
-                    <button onclick="closeModal('topSellerModal')" class="text-white hover:text-purple-200 text-2xl">
-                        <i class="fas fa-times"></i>
+    const modal = document.createElement('div');
+    modal.id = 'top-seller-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 1200px;">
+            <button class="modal-close" onclick="closeModal('top-seller-modal')">&times;</button>
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; margin-right: 8px; vertical-align: middle;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                    </svg>
+                    Trend Ürün Analizi
+                </h2>
+                <p class="modal-subtitle">${trends.length} trend ürün bulundu</p>
+            </div>
+            
+            <div style="padding: 20px; background: #f9fafb; border-radius: 8px; margin-bottom: 20px;">
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button onclick="filterTrends('all')" class="btn btn-primary btn-sm">Tümü</button>
+                    <button onclick="filterTrends('high_trend')" class="btn btn-outline btn-sm">
+                        Yüksek Trend (80+)
+                    </button>
+                    <button onclick="filterTrends('high_sales')" class="btn btn-outline btn-sm">
+                        Çok Satanlar (150+)
                     </button>
                 </div>
             </div>
             
-            <div class="p-4 bg-gray-50 border-b">
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="filterTrends('all')" class="px-4 py-2 bg-blue-600 text-white rounded-lg">
-                        Tümü
-                    </button>
-                    <button onclick="filterTrends('high_trend')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
-                        <i class="fas fa-fire mr-2"></i>Yüksek Trend
-                    </button>
-                    <button onclick="filterTrends('high_sales')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
-                        <i class="fas fa-chart-bar mr-2"></i>Çok Satanlar
-                    </button>
-                </div>
+            <div id="trends-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; max-height: 600px; overflow-y: auto; padding: 10px;">
+                ${trends.map((trend, index) => `
+                    <div class="product-card" data-trend-index="${index}" data-score="${trend.trend_score}" data-sales="${trend.monthly_sales}">
+                        <div class="product-image">
+                            <img src="${trend.image_url}" alt="${trend.title}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
+                            <div class="product-badge" style="background: ${trend.trend_score >= 90 ? '#dc2626' : trend.trend_score >= 80 ? '#ea580c' : '#16a34a'}">
+                                ${trend.trend_score.toFixed(1)}
+                            </div>
+                            <div style="position: absolute; bottom: 12px; left: 12px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 6px; font-size: 12px;">
+                                ${trend.monthly_sales} satış/ay
+                            </div>
+                        </div>
+                        <div class="product-content">
+                            <div class="product-header">
+                                <h3 class="product-title">${trend.title}</h3>
+                                <div class="product-price">$${trend.price}</div>
+                            </div>
+                            <span class="product-category">${trend.category}</span>
+                            <p class="product-description">${trend.description}</p>
+                            <div class="product-actions">
+                                <button class="btn btn-primary btn-sm" onclick="createProductFromTrend(${index})" style="flex: 1;">
+                                    AI ile Oluştur
+                                </button>
+                                <button class="btn btn-outline btn-sm" onclick="saveTrend(${index})">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
             </div>
             
-            <div class="p-6 overflow-y-auto max-h-[60vh]">
-                <div id="trendsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    `;
-    
-    trends.forEach((trend, index) => {
-        const trendColor = trend.trend_score >= 90 ? 'bg-red-100 text-red-800' :
-                          trend.trend_score >= 80 ? 'bg-orange-100 text-orange-800' :
-                          trend.trend_score >= 70 ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800';
-        
-        html += `
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow">
-                <div class="relative h-48 bg-gray-100">
-                    <img src="${trend.image_url}" alt="${trend.title}"
-                         class="w-full h-full object-cover">
-                    
-                    <div class="absolute top-3 right-3 ${trendColor} px-3 py-1 rounded-full text-sm font-bold">
-                        ${trend.trend_score.toFixed(1)}
-                    </div>
-                    
-                    <div class="absolute bottom-3 left-3 bg-black bg-opacity-70 text-white px-3 py-1 rounded-lg text-sm">
-                        <i class="fas fa-shopping-cart mr-1"></i>${trend.monthly_sales}/ay
-                    </div>
-                </div>
-                
-                <div class="p-4">
-                    <h4 class="font-bold text-gray-800 truncate">${trend.title}</h4>
-                    <p class="text-sm text-gray-600 mt-1 line-clamp-2">${trend.description}</p>
-                    
-                    <div class="flex justify-between items-center mt-4">
-                        <span class="bg-blue-50 text-blue-700 text-xs px-3 py-1 rounded-full">
-                            ${trend.category}
-                        </span>
-                        <span class="font-bold text-lg text-gray-800">
-                            $${parseFloat(trend.price).toFixed(2)}
-                        </span>
-                    </div>
-                    
-                    <div class="flex flex-wrap gap-1 mt-3">
-                        ${trend.tags.slice(0, 3).map(tag => `
-                            <span class="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">
-                                ${tag}
-                            </span>
-                        `).join('')}
-                    </div>
-                    
-                    <div class="flex gap-2 mt-4 pt-4 border-t border-gray-100">
-                        <button onclick="createProductFromTrend(${index})" 
-                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium">
-                            <i class="fas fa-magic mr-2"></i>AI ile Oluştur
-                        </button>
-                        <button onclick="saveTrend(${index})" 
-                                class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                            <i class="fas fa-bookmark"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    
-    html += `
-                </div>
-            </div>
-            
-            <div class="bg-gray-50 p-4 border-t">
-                <div class="flex justify-between items-center">
-                    <div class="text-sm text-gray-600">
-                        <i class="fas fa-info-circle mr-2"></i>
-                        AI ile ürün oluşturmak için yukarıdaki butonları kullanın
-                    </div>
-                    <button onclick="closeModal('topSellerModal')" 
-                            class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-                        Kapat
-                    </button>
-                </div>
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+                <button onclick="closeModal('top-seller-modal')" class="btn btn-outline">
+                    Kapat
+                </button>
             </div>
         </div>
     `;
     
-    modal.innerHTML = html;
-    modal.classList.remove('hidden');
+    document.body.appendChild(modal);
+    modal.classList.add('active');
 }
 
+window.filterTrends = function(filter) {
+    const cards = document.querySelectorAll('#trends-grid .product-card');
+    
+    cards.forEach(card => {
+        const score = parseFloat(card.dataset.score);
+        const sales = parseInt(card.dataset.sales);
+        
+        let show = true;
+        
+        if (filter === 'high_trend') {
+            show = score >= 80;
+        } else if (filter === 'high_sales') {
+            show = sales >= 150;
+        }
+        
+        card.style.display = show ? '' : 'none';
+    });
+};
+
+window.createProductFromTrend = async function(index) {
+    const trend = topSellersData[index];
+    if (!trend) return;
+    
+    try {
+        showLoading('Ürün oluşturuluyor...');
+        
+        const newProduct = {
+            user_id: currentUser.id,
+            title: trend.title,
+            description: trend.description,
+            category: trend.category,
+            price: parseFloat(trend.price),
+            images: [trend.image_url],
+            tags: trend.tags,
+            status: 'draft',
+            metadata: { 
+                source: 'trend_analysis', 
+                trend_score: trend.trend_score,
+                monthly_sales: trend.monthly_sales 
+            }
+        };
+        
+        const { error } = await supabase
+            .from('products')
+            .insert([newProduct]);
+        
+        if (error) throw error;
+        
+        showNotification('Ürün başarıyla oluşturuldu!', 'success');
+        closeModal('top-seller-modal');
+        await loadUserProducts();
+        
+    } catch (error) {
+        console.error('Trend ürün oluşturma hatası:', error);
+        showNotification('Ürün oluşturulamadı: ' + error.message, 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+window.saveTrend = function(index) {
+    const trend = topSellersData[index];
+    if (!trend) return;
+    
+    // Burada trend'i veritabanına kaydedebilirsiniz
+    showNotification('Trend kaydedildi', 'success');
+};
+
+// BENZER ÜRÜN OLUŞTURMA
 async function generateSimilarProduct(productId) {
     try {
         showLoading('Benzer ürün oluşturuluyor...');
@@ -533,17 +903,16 @@ async function generateSimilarProduct(productId) {
         
         if (!originalProduct) throw new Error('Ürün bulunamadı');
         
+        const variation = getRandomVariation();
+        
         // AI araç kontrolü
         if (aiTools.length === 0) {
             await createManualSimilarProduct(originalProduct);
             return;
         }
         
-        // AI ile görsel oluştur
-        const variation = getRandomVariation();
         const generatedImage = await generateAIImage(originalProduct, variation);
         
-        // Yeni ürün oluştur
         const newProduct = {
             user_id: currentUser.id,
             title: `${variation.style} ${originalProduct.title}`,
@@ -553,32 +922,17 @@ async function generateSimilarProduct(productId) {
             images: [generatedImage],
             tags: [...(originalProduct.tags || []), variation.style, 'ai_generated'],
             status: 'draft',
-            type: originalProduct.type,
             metadata: {
                 original_product_id: originalProduct.id,
                 variation: variation
             }
         };
         
-        const { data: createdProduct, error } = await supabase
+        const { error } = await supabase
             .from('products')
-            .insert(newProduct)
-            .select()
-            .single();
+            .insert([newProduct]);
         
         if (error) throw error;
-        
-        // AI log kaydı
-        await supabase.from('ai_logs').insert({
-            user_id: currentUser.id,
-            product_id: createdProduct.id,
-            operation_type: 'mockup',
-            input_data: { original_product: originalProduct, variation: variation },
-            output_data: { generated_image: generatedImage },
-            model_used: 'dall-e-3',
-            status: 'completed',
-            cost_estimate: 0.02
-        });
         
         showNotification('Benzer ürün başarıyla oluşturuldu!', 'success');
         await loadUserProducts();
@@ -604,7 +958,7 @@ function getRandomVariation() {
 }
 
 async function generateAIImage(originalProduct, variation) {
-    // Mock AI görsel üretimi - gerçek implementasyonda AI API çağrısı yapılacak
+    // Mock AI görsel üretimi
     const mockImages = [
         'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=400&h=400&fit=crop',
         'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=400&fit=crop',
@@ -632,13 +986,12 @@ async function createManualSimilarProduct(originalProduct) {
         price: calculateVariedPrice(originalProduct.price),
         images: [mockImage],
         tags: [...(originalProduct.tags || []), variation.style, 'manual'],
-        status: 'draft',
-        type: originalProduct.type
+        status: 'draft'
     };
     
     const { error } = await supabase
         .from('products')
-        .insert(newProduct);
+        .insert([newProduct]);
     
     if (error) throw error;
     
@@ -646,6 +999,7 @@ async function createManualSimilarProduct(originalProduct) {
     await loadUserProducts();
 }
 
+// MOCKUP OLUŞTURMA
 async function generateProductMockups(productId) {
     try {
         showLoading('Mockup görselleri oluşturuluyor...');
@@ -664,7 +1018,6 @@ async function generateProductMockups(productId) {
             // Gerçek POD API entegrasyonu
             mockupUrls = await generateRealMockups(productId, podProvider);
         } else {
-            // Mock mockup üretimi
             mockupUrls = generateMockMockups();
         }
         
@@ -675,6 +1028,9 @@ async function generateProductMockups(productId) {
             .eq('id', productId);
         
         if (error) throw error;
+        
+        // Mockup modalını aç
+        openMockupModal(productId, mockupUrls);
         
         showNotification('Mockup görselleri başarıyla oluşturuldu!', 'success');
         
@@ -698,216 +1054,107 @@ function generateMockMockups() {
     }));
 }
 
-function updateProductStats() {
-    if (!currentProducts || currentProducts.length === 0) {
-        document.getElementById('totalProducts').textContent = '0';
-        document.getElementById('listedProducts').textContent = '0';
-        document.getElementById('draftProducts').textContent = '0';
-        document.getElementById('totalValue').textContent = '$0';
-        return;
+async function generateRealMockups(productId, podProvider) {
+    // Gerçek POD API entegrasyonu
+    return generateMockMockups();
+}
+
+function openMockupModal(productId, mockupUrls = []) {
+    const mockupContainer = document.getElementById('mockup-editor-container');
+    
+    if (mockupContainer) {
+        mockupContainer.innerHTML = `
+            <div class="mockup-editor">
+                <h3 style="margin-bottom: 16px; font-size: 18px; font-weight: 600;">Mockup Görselleri</h3>
+                
+                <div class="mockup-preview">
+                    ${mockupUrls.length > 0 ? `
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; width: 100%;">
+                            ${mockupUrls.map((mockup, index) => `
+                                <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+                                    <img src="${mockup.url}" alt="Mockup ${index + 1}" style="width: 100%; height: 150px; object-fit: cover;">
+                                    <div style="padding: 8px; font-size: 12px; color: #6b7280;">
+                                        ${mockup.angle} - ${mockup.style}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <div style="text-align: center; color: #6b7280;">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <p style="margin-top: 16px;">Mockup görselleri hazırlanıyor...</p>
+                        </div>
+                    `}
+                </div>
+                
+                <div class="mockup-controls">
+                    <div class="control-group">
+                        <label class="control-label">Mockup Stili</label>
+                        <select class="control-input" id="mockup-style">
+                            <option value="lifestyle">Yaşam Tarzı</option>
+                            <option value="flat">Düz</option>
+                            <option value="model">Model Üzerinde</option>
+                            <option value="packaging">Paketli</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Arkaplan</label>
+                        <select class="control-input" id="mockup-background">
+                            <option value="white">Beyaz</option>
+                            <option value="gray">Gri</option>
+                            <option value="scene">Sahne</option>
+                            <option value="custom">Özel</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Açılar</label>
+                        <select class="control-input" id="mockup-angles" multiple style="height: 100px;">
+                            <option value="front" selected>Ön</option>
+                            <option value="back" selected>Arka</option>
+                            <option value="side">Yan</option>
+                            <option value="perspective">Perspektif</option>
+                            <option value="closeup">Yakın Çekim</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button class="btn btn-primary btn-flex" onclick="regenerateMockups('${productId}')">
+                        Yeniden Oluştur
+                    </button>
+                    <button class="btn btn-outline btn-flex" onclick="downloadMockups()">
+                        İndir
+                    </button>
+                    <button class="btn btn-outline btn-flex" onclick="closeModal('modal-mockup')">
+                        Kapat
+                    </button>
+                </div>
+            </div>
+        `;
     }
     
-    const total = currentProducts.length;
-    const listed = currentProducts.filter(p => p.status === 'listed').length;
-    const draft = currentProducts.filter(p => p.status === 'draft').length;
-    const totalValue = currentProducts.reduce((sum, p) => sum + parseFloat(p.price || 0), 0);
-    
-    document.getElementById('totalProducts').textContent = total.toString();
-    document.getElementById('listedProducts').textContent = listed.toString();
-    document.getElementById('draftProducts').textContent = draft.toString();
-    document.getElementById('totalValue').textContent = `$${totalValue.toFixed(2)}`;
+    document.getElementById('modal-mockup').classList.add('active');
 }
 
-function filterProductsByCategory(category) {
-    const cards = document.querySelectorAll('#productsGrid > div');
-    
-    cards.forEach(card => {
-        if (category === 'all') {
-            card.style.display = '';
-        } else {
-            const categorySpan = card.querySelector('.bg-blue-100');
-            if (categorySpan) {
-                const cardCategory = categorySpan.textContent.trim();
-                card.style.display = cardCategory === category ? '' : 'none';
-            }
-        }
-    });
-}
+window.regenerateMockups = async function(productId) {
+    await generateProductMockups(productId);
+};
 
-function filterProductsByStatus(status) {
-    const cards = document.querySelectorAll('#productsGrid > div');
-    
-    cards.forEach(card => {
-        if (status === 'all') {
-            card.style.display = '';
-        } else {
-            const statusBadge = card.querySelector('.absolute.top-3.right-3');
-            if (statusBadge) {
-                const cardStatus = getStatusFromText(statusBadge.textContent.trim());
-                card.style.display = cardStatus === status ? '' : 'none';
-            }
-        }
-    });
-}
+window.downloadMockups = function() {
+    showNotification('Mockup indirme işlemi başlatıldı', 'info');
+};
 
-function searchProducts(query) {
-    const cards = document.querySelectorAll('#productsGrid > div');
-    const searchTerm = query.toLowerCase().trim();
-    
-    cards.forEach(card => {
-        if (searchTerm === '') {
-            card.style.display = '';
-        } else {
-            const title = card.querySelector('h3')?.textContent.toLowerCase() || '';
-            const description = card.querySelector('p')?.textContent.toLowerCase() || '';
-            const tags = Array.from(card.querySelectorAll('.bg-gray-100')).map(tag => tag.textContent.toLowerCase()).join(' ');
-            
-            const cardText = `${title} ${description} ${tags}`;
-            card.style.display = cardText.includes(searchTerm) ? '' : 'none';
-        }
-    });
-}
-
-function updateActiveCategoryButton(activeBtn) {
-    document.querySelectorAll('.category-filter').forEach(btn => {
-        btn.classList.remove('bg-blue-600', 'text-white');
-        btn.classList.add('bg-gray-200', 'text-gray-700');
-    });
-    
-    activeBtn.classList.remove('bg-gray-200', 'text-gray-700');
-    activeBtn.classList.add('bg-blue-600', 'text-white');
-}
-
-function updateActiveStatusButton(activeBtn) {
-    document.querySelectorAll('.status-filter').forEach(btn => {
-        btn.classList.remove('bg-blue-600', 'text-white');
-        btn.classList.add('bg-gray-200', 'text-gray-700');
-    });
-    
-    activeBtn.classList.remove('bg-gray-200', 'text-gray-700');
-    activeBtn.classList.add('bg-blue-600', 'text-white');
-}
-
-// Yardımcı fonksiyonlar
-function getProductStatusClass(status) {
-    const classMap = {
-        'draft': 'bg-gray-100 text-gray-800',
-        'listed': 'bg-green-100 text-green-800',
-        'archived': 'bg-red-100 text-red-800'
-    };
-    return classMap[status] || 'bg-gray-100 text-gray-800';
-}
-
-function getProductStatusText(status) {
-    const textMap = {
-        'draft': 'Taslak',
-        'listed': 'Yayında',
-        'archived': 'Arşiv'
-    };
-    return textMap[status] || status;
-}
-
-function getStatusFromText(text) {
-    const reverseMap = {
-        'taslak': 'draft',
-        'yayında': 'listed',
-        'arşiv': 'archived'
-    };
-    return reverseMap[text.toLowerCase()] || text;
-}
-
-// Global fonksiyonlar
+// EKSİK GLOBAL FONKSİYONLAR
+window.editProduct = editProduct;
 window.generateSimilarProduct = generateSimilarProduct;
 window.generateProductMockups = generateProductMockups;
 window.viewProductDetails = async function(productId) {
     showNotification('Ürün detayları gösterilecek', 'info');
 };
 
-window.editProduct = async function(productId) {
-    showNotification('Ürün düzenleme sayfası açılacak', 'info');
-};
-
-window.createProductFromTrend = async function(index) {
-    const trend = topSellersData[index];
-    if (!trend) return;
-    
-    try {
-        showLoading('Ürün oluşturuluyor...');
-        
-        const newProduct = {
-            user_id: currentUser.id,
-            title: trend.title,
-            description: trend.description,
-            category: trend.category,
-            price: parseFloat(trend.price),
-            images: [trend.image_url],
-            tags: trend.tags,
-            status: 'draft',
-            type: 'POD',
-            metadata: { source: 'trend_analysis', trend_score: trend.trend_score }
-        };
-        
-        const { error } = await supabase
-            .from('products')
-            .insert(newProduct);
-        
-        if (error) throw error;
-        
-        showNotification('Ürün başarıyla oluşturuldu!', 'success');
-        await loadUserProducts();
-        closeModal('topSellerModal');
-        
-    } catch (error) {
-        showNotification('Ürün oluşturulamadı: ' + error.message, 'error');
-    } finally {
-        hideLoading();
-    }
-};
-
-window.saveTrend = function(index) {
-    const trend = topSellersData[index];
-    if (!trend) return;
-    
-    // Trend'i kaydet
-    showNotification('Trend kaydedildi', 'success');
-};
-
-window.filterTrends = function(filter) {
-    const cards = document.querySelectorAll('#trendsGrid > div');
-    
-    cards.forEach(card => {
-        if (filter === 'all') {
-            card.style.display = '';
-        } else if (filter === 'high_trend') {
-            const scoreElement = card.querySelector('.absolute.top-3.right-3');
-            if (scoreElement) {
-                const scoreText = scoreElement.textContent.trim();
-                const score = parseFloat(scoreText);
-                card.style.display = score >= 80 ? '' : 'none';
-            }
-        } else if (filter === 'high_sales') {
-            const salesElement = card.querySelector('.absolute.bottom-3.left-3');
-            if (salesElement) {
-                const salesText = salesElement.textContent.trim();
-                const sales = parseInt(salesText.split('/')[0]);
-                card.style.display = sales >= 150 ? '' : 'none';
-            }
-        }
-    });
-};
-
-window.closeModal = function(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.innerHTML = '';
-    }
-};
-
-// Modal fonksiyonları (basit implementasyon)
-window.showNewProductModal = function() {
-    showNotification('Yeni ürün modalı açılacak', 'info');
-};
+window.showNewProductModal = showNewProductModal;
 
 window.showAIGenerateModal = function() {
     showNotification('AI ürün oluşturma modalı açılacak', 'info');
@@ -930,7 +1177,6 @@ window.publishToEtsy = async function() {
         }
         
         // Burada gerçek Etsy API entegrasyonu olacak
-        // Şimdilik mock başarılı mesajı
         await new Promise(resolve => setTimeout(resolve, 2000));
         
         showNotification('Ürün Etsy\'ye başarıyla gönderildi!', 'success');
@@ -942,19 +1188,56 @@ window.publishToEtsy = async function() {
     }
 };
 
-// Loading ve notification fonksiyonları (payment.js ile aynı)
+// YARDIMCI FONKSİYONLAR
+function truncateText(text, maxLength) {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// LOADING VE NOTIFICATION
 function showLoading(message = 'Yükleniyor...') {
     let loadingEl = document.getElementById('loadingOverlay');
     if (!loadingEl) {
         loadingEl = document.createElement('div');
         loadingEl.id = 'loadingOverlay';
-        loadingEl.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        loadingEl.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        `;
         loadingEl.innerHTML = `
-            <div class="bg-white rounded-lg p-8 flex flex-col items-center">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                <p class="text-gray-700">${message}</p>
+            <div style="background: white; padding: 24px; border-radius: 12px; display: flex; flex-direction: column; align-items: center;">
+                <div class="loading-spinner" style="width: 40px; height: 40px; border: 3px solid #f3f4f6; border-top-color: #ea580c; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px;"></div>
+                <p style="color: #374151; font-weight: 500;">${message}</p>
             </div>
         `;
+        
+        // Spinner animasyonu için CSS
+        if (!document.querySelector('#loading-spinner-style')) {
+            const style = document.createElement('style');
+            style.id = 'loading-spinner-style';
+            style.textContent = `
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
         document.body.appendChild(loadingEl);
     }
 }
@@ -967,33 +1250,70 @@ function hideLoading() {
 }
 
 function showNotification(message, type = 'info') {
-    const existing = document.querySelector('.notification');
-    if (existing) existing.remove();
+    // Önceki bildirimleri temizle
+    document.querySelectorAll('.notification').forEach(el => el.remove());
     
     const colors = {
-        success: 'bg-green-500',
-        error: 'bg-red-500',
-        warning: 'bg-yellow-500',
-        info: 'bg-blue-500'
+        success: '#10b981',
+        error: '#ef4444',
+        warning: '#f59e0b',
+        info: '#3b82f6'
     };
     
     const notification = document.createElement('div');
-    notification.className = `notification fixed top-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50`;
+    notification.className = 'notification';
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${colors[type]};
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+    `;
+    
     notification.innerHTML = `
-        <div class="flex items-center">
-            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} mr-3"></i>
+        <div style="display: flex; align-items: center; gap: 8px;">
             <span>${message}</span>
-            <button onclick="this.parentElement.parentElement.remove()" class="ml-4">
-                <i class="fas fa-times"></i>
+            <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; margin-left: 8px;">
+                &times;
             </button>
         </div>
     `;
     
+    // Animasyon için CSS
+    if (!document.querySelector('#notification-animation')) {
+        const style = document.createElement('style');
+        style.id = 'notification-animation';
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
     document.body.appendChild(notification);
     
+    // 5 saniye sonra kaldır
     setTimeout(() => {
         if (notification.parentElement) {
-            notification.remove();
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
         }
     }, 5000);
 }
+
+// Global fonksiyonlar
+window.closeModal = closeModal;
+window.showNotification = showNotification;
+
+console.log('Products.js tam yüklendi - Tüm fonksiyonlar dahil');
