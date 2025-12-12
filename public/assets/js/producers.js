@@ -1,6 +1,6 @@
 // producers.js - Düzeltilmiş versiyon
-import { supabase } from './supabaseClient.js';
-import { showNotification } from './ui.js';
+import { supabase } from '/assets/js/supabaseClient.js';
+import { showNotification } from '/assets/js//ui.js';
 
 export async function loadProducers() {
   const container = document.getElementById('pod-providers-list');
