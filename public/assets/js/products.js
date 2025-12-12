@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     try {
         // Check authentication - DÜZELTME: supabase → supabase
-        const { data: { user }, error } = await supabase.auth.getUser();
+        const { data: { user }, error } = await window.supabase.auth.getUser();
         if (error || !user) throw new Error('Lütfen giriş yapın');
         currentUser = user;
         
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 // ==================== ETSY BAĞLANTISI ====================
 async function checkEtsyConnection() {
     try {
-        const { data: etsyShop, error } = await supabase
+        const { data: etsyShop, error } = await window.supabase
             .from('etsy_shops')
             .select('*')
             .eq('user_id', currentUser.id)
@@ -237,7 +237,7 @@ window.createSimilarProduct = async function(trendIndex) {
 
 // AI servisini al
 async function getAIService() {
-    const { data: aiTools, error } = await supabase
+    const { data: aiTools, error } = await window.supabase
         .from('api_tools')
         .select('*')
         .eq('user_id', currentUser.id)
@@ -292,7 +292,7 @@ async function generateSimilarContent(aiService, originalTrend) {
 // BENZER GÖRSEL OLUŞTUR (orijinalden farklı ama aynı tarzda)
 async function generateSimilarImage(aiService, originalTrend) {
     // Görsel AI servisini al
-    const { data: imageAIService, error } = await supabase
+    const { data: imageAIService, error } = await window.supabase
         .from('api_tools')
         .select('*')
         .eq('user_id', currentUser.id)
@@ -361,7 +361,7 @@ async function saveNewProduct(content, imageUrl, originalTrend) {
         updated_at: new Date().toISOString()
     };
     
-    const { data: product, error } = await supabase
+    const { data: product, error } = await window.supabase
         .from('products')
         .insert([newProduct])
         .select()
@@ -370,7 +370,7 @@ async function saveNewProduct(content, imageUrl, originalTrend) {
     if (error) throw error;
     
     // AI log kaydı
-    await supabase.from('ai_logs').insert({
+    await window.supabase.from('ai_logs').insert({
         user_id: currentUser.id,
         product_id: product.id,
         operation_type: 'similar_product_generation',
@@ -387,7 +387,7 @@ async function saveNewProduct(content, imageUrl, originalTrend) {
 async function generateMockupsForProduct(productId, productImage) {
     try {
         // Mockup servisini al
-        const { data: mockupService, error } = await supabase
+        const { data: mockupService, error } = await window.supabase
             .from('api_tools')
             .select('*')
             .eq('user_id', currentUser.id)
@@ -459,7 +459,7 @@ async function publishToEtsy(product) {
     }
     
     // Etsy shop bilgilerini al
-    const { data: etsyShop } = await supabase
+    const { data: etsyShop } = await window.supabase
         .from('etsy_shops')
         .select('*')
         .eq('user_id', currentUser.id)
@@ -484,7 +484,7 @@ async function publishToEtsy(product) {
     const result = await etsyService.createListing(listingData);
     
     // Ürünü güncelle
-    await supabase
+    await window.supabase
         .from('products')
         .update({
             etsy_listing_id: result.listing_id,
@@ -497,7 +497,7 @@ async function publishToEtsy(product) {
 // Amazon yayınlama
 async function publishToAmazon(product) {
     // api_tools'dan Amazon servisini al
-    const { data: amazonService, error } = await supabase
+    const { data: amazonService, error } = await window.supabase
         .from('api_tools')
         .select('*')
         .eq('user_id', currentUser.id)
@@ -671,7 +671,7 @@ function setupEventListeners() {
 // ==================== PRODUCT LOADING ====================
 async function loadUserProducts() {
     try {
-        const { data: products, error } = await supabase
+        const { data: products, error } = await window.supabase
             .from('products')
             .select('*')
             .eq('user_id', currentUser.id)
