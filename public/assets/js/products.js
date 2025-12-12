@@ -222,6 +222,8 @@ function renderProducts(products) {
     attachProductCardListeners();
 }
 
+
+
 function createProductCardHTML(product) {
     const statusClass = getProductStatusClass(product.status);
     const statusText = getProductStatusText(product.status);
@@ -695,9 +697,146 @@ async function createPODOrder(productId, quantity = 1) {
         
         // Prepare order data for POD provider
         const orderData = {
-            external_id: `order-${Date       // BURASI EKSİK SANKİ
+            external_id: `order-${Date.now()}-${productId.substring(0, 8)}`,
+            product_id: product.pod_product_id || getPODProductId(product),
+            product_name: product.title,
+            quantity: quantity,
+            shipping_address: getDefaultShippingAddress(),
+            design_urls: product.images || [getProductPlaceholderImage(product.category)],
+            print_details: {
+                print_area: 'full_front',
+                print_type: 'digital_print',
+                dimensions: getProductDimensions(product.category),
+                color_profile: 'CMYK'
+            },
+            options: {
+                size: 'M',
+                color: 'White',
+                material: getProductMaterial(product.category)
+            },
+            customer_info: {
+                name: "Customer Name",
+                email: "customer@example.com"
+            }
+        };
+        
+        // Submit order to POD provider
+        const result = await podService.createOrder(orderData);
+        
+        if (result.success) {
+            // Save order to database
+            const { data: order, error: dbError } = await supabase
+                .from('orders')
+                .insert({
+                    user_id: currentUser.id,
+                    order_number: `POD-${Date.now()}`,
+                    customer_name: "Customer Name",
+                    customer_email: "customer@example.com",
+                    shipping_address: JSON.stringify(orderData.shipping_address),
+                    product_id: productId,
+                    product_name: product.title,
+                    quantity: quantity,
+                    unit_price: product.price,
+                    total_price: product.price * quantity,
+                    status: 'processing',
+                    pod_order_id: result.order_id,
+                    pod_provider: podService.providerName,
+                    pod_status: 'processing',
+                    fulfillment_status: 'processing',
+                    notes: `POD Order created via system. External ID: ${orderData.external_id}`
+                })
+                .select()
+                .single();
+            
+            if (dbError) throw dbError;
+            
+            // Save POD order details
+            const { error: podError } = await supabase
+                .from('pod_orders')
+                .insert({
+                    user_id: currentUser.id,
+                    order_id: order.id,
+                    product_id: productId,
+                    pod_provider: podService.providerName,
+                    pod_order_id: result.order_id,
+                    external_id: orderData.external_id,
+                    quantity: quantity,
+                    status: 'processing',
+                    order_data: orderData,
+                    response_data: result,
+                    estimated_delivery: result.estimated_delivery || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+                });
+            
+            if (podError) {
+                console.error('Failed to save POD order details:', podError);
+            }
+            
+            // Show success notification
+            showNotification('✅ POD order created successfully!', 'success');
+            
+            // Log the action
+            await logPODOrderCreation(productId, result.order_id);
+            
+            // Return result for further processing
+            return {
+                success: true,
+                orderId: result.order_id,
+                databaseOrderId: order.id,
+                podResult: result
+            };
+            
+        } else {
+            throw new Error(result.message || 'Failed to create POD order');
+        }
+        
+    } catch (error) {
+        console.error('Failed to create POD order:', error);
+        showNotification(`❌ Failed to create POD order: ${error.message}`, 'error');
+        throw error;
+    } finally {
+        hideLoading();
+    }
+}
 
-     
+// Helper functions for POD order creation
+function getPODProductId(product) {
+    // Map local product to POD provider's product ID
+    // This should be stored in product metadata or separate mapping table
+    const podMappings = {
+        'tshirt': '1',
+        'mug': '2',
+        'plate': '3',
+        'phone-case': '4',
+        'jewelry': '5',
+        'wood': '6',
+        'art': '7',
+        'home': '8',
+        'stationery': '9',
+        'accessories': '10'
+    };
+    
+    return podMappings[product.category] || '1';
+}
+
+async function logPODOrderCreation(productId, podOrderId) {
+    try {
+        await supabase
+            .from('ai_logs')
+            .insert({
+                user_id: currentUser.id,
+                operation_type: 'pod_order',
+                product_id: productId,
+                input_data: { productId, podOrderId },
+                output_data: { success: true, timestamp: new Date().toISOString() },
+                status: 'completed',
+                created_at: new Date().toISOString(),
+                completed_at: new Date().toISOString()
+            });
+    } catch (error) {
+        console.error('Failed to log POD order creation:', error);
+    }
+}
+
 console.log('🛍️ Loading Products System...');
 
 // Global state
