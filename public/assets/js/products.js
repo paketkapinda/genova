@@ -1,1291 +1,695 @@
-// products.js - TAM VE EKSİKSİZ VERSİYON
-
-let currentUser = null;
-let currentProducts = [];
-let aiTools = [];
-let topSellersData = [];
-let etsyService = null;
-let currentFilters = {
-    status: '',
-    category: '',
-    search: ''
-};
-
-// DOM yüklendiğinde çalıştır
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('Products sayfası yükleniyor...');
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Products – Etsy AI POD</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     
-    try {
-        // Kullanıcı kontrolü
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        
-        if (authError || !user) {
-            console.error('Auth hatası:', authError);
-            showNotification('Please login first', 'error');
-            setTimeout(() => {
-                window.location.href = '/login.html';
-            }, 2000);
-            return;
-        }
-        
-        currentUser = user;
-        console.log('Kullanıcı:', currentUser.email);
-        
-        // Sayfayı başlat
-        await initializeProductsPage();
-        
-    } catch (error) {
-        console.error('Başlatma hatası:', error);
-        showNotification('Page load error: ' + error.message, 'error');
-    }
-});
-
-async function initializeProductsPage() {
-    try {
-        showLoading('Loading...');
-        
-        // Etsy servisini başlat
-        await initializeEtsyService();
-        
-        // Paralel yükleme işlemleri
-        await Promise.all([
-            loadAITools(),
-            loadUserProducts(),
-            loadEtsyShopStatus()
-        ]);
-        
-        setupAllEventListeners();
-        updateProductStats();
-        
-        showNotification('Products page loaded successfully', 'success');
-        
-    } catch (error) {
-        console.error('Page initialization error:', error);
-        showNotification('Page initialization failed', 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-async function initializeEtsyService() {
-    try {
-        etsyService = await EtsyServiceFactory.createService(currentUser.id);
-        console.log('Etsy service initialized:', etsyService.constructor.name);
-    } catch (error) {
-        console.error('Etsy service initialization error:', error);
-        etsyService = new MockEtsyService();
-    }
-}
-
-async function loadEtsyShopStatus() {
-    try {
-        const { data: etsyShop } = await supabase
-            .from('etsy_shops')
-            .select('shop_name, is_active')
-            .eq('user_id', currentUser.id)
-            .single();
-        
-        if (etsyShop) {
-            // Etsy durumunu header'a ekle
-            const statusBadge = document.createElement('div');
-            statusBadge.className = `status-badge ${etsyShop.is_active ? '' : 'inactive'}`;
-            statusBadge.innerHTML = `
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                </svg>
-                ${etsyShop.shop_name} ${etsyShop.is_active ? '(Active)' : '(Inactive)'}
-            `;
-            
-            const headerActions = document.querySelector('.header-actions');
-            if (headerActions) {
-                headerActions.insertBefore(statusBadge, headerActions.firstChild);
-            }
-        }
-    } catch (error) {
-        console.log('No Etsy shop found');
-    }
-}
-
-async function loadAITools() {
-    try {
-        const { data, error } = await supabase
-            .from('ai_tools')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .eq('is_active', true);
-        
-        if (error) throw error;
-        aiTools = data || [];
-        console.log('AI Tools loaded:', aiTools.length);
-        
-    } catch (error) {
-        console.error('AI tools loading error:', error);
-        aiTools = [];
-    }
-}
-
-async function loadUserProducts() {
-    try {
-        console.log('Loading products for user:', currentUser.id);
-        
-        const { data: products, error } = await supabase
-            .from('products')
-            .select(`
-                *,
-                rating_stats (
-                    average_rating,
-                    total_reviews,
-                    monthly_sales_estimate
-                )
-            `)
-            .eq('user_id', currentUser.id)
-            .order('created_at', { ascending: false });
-        
-        if (error) {
-            console.error('Supabase error:', error);
-            throw error;
-        }
-        
-        currentProducts = products || [];
-        console.log('Products loaded:', currentProducts.length);
-        
-        renderProducts(currentProducts);
-        
-    } catch (error) {
-        console.error('Products loading error:', error);
-        showNotification('Error loading products: ' + error.message, 'error');
-        currentProducts = [];
-        renderProducts([]);
-    }
-}
-
-function renderProducts(products) {
-    const productsGrid = document.getElementById('products-grid');
-    const emptyState = document.getElementById('products-empty');
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    if (!productsGrid || !emptyState) {
-        console.error('Required DOM elements not found');
-        return;
-    }
+    <!-- Environment Configuration -->
+    <script src="/assets/js/env.js"></script>
     
-    if (!products || products.length === 0) {
-        productsGrid.innerHTML = '';
-        emptyState.classList.remove('hidden');
-        return;
-    }
+    <!-- Supabase Client -->
+    <script type="module" src="/assets/js/supabaseClient.js"></script>
     
-    emptyState.classList.add('hidden');
-    
-    let html = '';
-    products.forEach(product => {
-        html += createProductCardHTML(product);
-    });
-    
-    productsGrid.innerHTML = html;
-    
-    // Event listener'ları ekle
-    attachProductCardListeners();
-}
-
-function createProductCardHTML(product) {
-    const statusClass = getProductStatusClass(product.status);
-    const statusText = getProductStatusText(product.status);
-    const price = parseFloat(product.price || 0).toFixed(2);
-    const rating = product.rating_stats?.[0];
-    const hasEtsyListing = !!product.etsy_listing_id;
-    const imageUrl = product.images && product.images.length > 0 ? 
-        product.images[0] : getRandomProductImage(product.category);
-    
-    return `
-        <div class="product-card" data-id="${product.id}" data-status="${product.status}" data-category="${product.category || ''}">
-            <div class="product-image">
-                ${product.images && product.images.length > 0 ? 
-                    `<img src="${imageUrl}" alt="${product.title}" onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300/cccccc/969696?text=Product+Image';">` :
-                    `<div class="product-image-placeholder">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                        </svg>
-                        <p>Product Image</p>
-                    </div>`
-                }
-                <div class="product-badge ${statusClass}">${statusText}</div>
-                ${hasEtsyListing ? `
-                    <div class="etsy-badge">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                        </svg>
-                        Etsy
-                    </div>
-                ` : ''}
-                <div class="price-badge">$${price}</div>
-            </div>
-            <div class="product-content">
-                <div class="product-header">
-                    <h3 class="product-title" title="${escapeHtml(product.title || 'Untitled Product')}">
-                        ${truncateText(product.title || 'Untitled Product', 50)}
-                    </h3>
-                </div>
-                <span class="product-category">
-                    ${escapeHtml(product.category || 'Uncategorized')}
-                </span>
-                <p class="product-description" title="${escapeHtml(product.description || '')}">
-                    ${truncateText(product.description || 'No description', 100)}
-                </p>
-                ${rating ? `
-                    <div class="product-rating">
-                        <span style="color: #fbbf24; font-weight: 600; display: flex; align-items: center;">
-                            ★ ${rating.average_rating?.toFixed(1) || '0.0'}
-                        </span>
-                        <span style="color: #6b7280; font-size: 12px;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; margin-right: 4px;">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                            </svg>
-                            ${rating.monthly_sales_estimate || '0'} sales/month
-                        </span>
-                    </div>
-                ` : ''}
-                <div class="product-actions">
-                    ${!hasEtsyListing ? `
-                        <button class="btn btn-primary btn-sm" data-action="publish-etsy" data-product-id="${product.id}">
-                            Publish to Etsy
-                        </button>
-                    ` : `
-                        <button class="btn btn-outline btn-sm" data-action="view-etsy" data-product-id="${product.id}">
-                            View on Etsy
-                        </button>
-                    `}
-                    <button class="btn btn-outline btn-sm" data-action="mockup" data-product-id="${product.id}">
-                        Mockup
-                    </button>
-                    <button class="btn btn-outline btn-sm" data-action="edit" data-product-id="${product.id}">
-                        Edit
-                    </button>
-                    <button class="btn btn-outline btn-sm" data-action="similar" data-product-id="${product.id}">
-                        Similar
-                    </button>
-                    <button class="btn btn-outline btn-sm" data-action="delete" data-product-id="${product.id}">
-                        Delete
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function getRandomProductImage(category) {
-    const images = {
-        'tshirt': 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=300&fit=crop',
-        'mug': 'https://images.unsplash.com/photo-1514228742587-6b1558fcf93a?w=400&h=300&fit=crop',
-        'plate': 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=300&fit=crop',
-        'phone-case': 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&h=300&fit=crop',
-        'jewelry': 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=300&fit=crop',
-        'wood': 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=300&fit=crop'
-    };
-    
-    return images[category] || 'https://images.unsplash.com/photo-1563241527-3004b7be0ffd?w=400&h=300&fit=crop';
-}
-
-function attachProductCardListeners() {
-    // Edit button
-    document.querySelectorAll('[data-action="edit"]').forEach(button => {
-        button.addEventListener('click', function() {
-            const productId = this.dataset.productId;
-            editProduct(productId);
-        });
-    });
-    
-    // Delete button
-    document.querySelectorAll('[data-action="delete"]').forEach(button => {
-        button.addEventListener('click', function() {
-            const productId = this.dataset.productId;
-            deleteProduct(productId);
-        });
-    });
-    
-    // Mockup button
-    document.querySelectorAll('[data-action="mockup"]').forEach(button => {
-        button.addEventListener('click', function() {
-            const productId = this.dataset.productId;
-            generateProductMockups(productId);
-        });
-    });
-    
-    // Similar button
-    document.querySelectorAll('[data-action="similar"]').forEach(button => {
-        button.addEventListener('click', function() {
-            const productId = this.dataset.productId;
-            generateSimilarProduct(productId);
-        });
-    });
-    
-    // Publish to Etsy button
-    document.querySelectorAll('[data-action="publish-etsy"]').forEach(button => {
-        button.addEventListener('click', function() {
-            const productId = this.dataset.productId;
-            publishProductToEtsy(productId);
-        });
-    });
-    
-    // View on Etsy button
-    document.querySelectorAll('[data-action="view-etsy"]').forEach(button => {
-        button.addEventListener('click', function() {
-            const productId = this.dataset.productId;
-            const product = currentProducts.find(p => p.id === productId);
-            if (product && product.etsy_listing_id) {
-                window.open(`https://www.etsy.com/listing/${product.etsy_listing_id}`, '_blank');
-            }
-        });
-    });
-}
-
-function setupAllEventListeners() {
-    // New product buttons
-    document.getElementById('btn-new-product')?.addEventListener('click', showNewProductModal);
-    document.getElementById('btn-empty-new-product')?.addEventListener('click', showNewProductModal);
-    document.getElementById('btn-analyze-top-sellers')?.addEventListener('click', analyzeTopSellers);
-    
-    // Filters
-    document.getElementById('filter-status')?.addEventListener('change', (e) => {
-        filterProductsByStatus(e.target.value);
-    });
-    
-    document.getElementById('filter-category')?.addEventListener('change', (e) => {
-        filterProductsByCategory(e.target.value);
-    });
-    
-    // Search
-    document.getElementById('search-products')?.addEventListener('input', (e) => {
-        searchProducts(e.target.value);
-    });
-    
-    // Modal close buttons
-    document.getElementById('modal-product-close')?.addEventListener('click', () => closeModal('modal-product'));
-    document.getElementById('modal-mockup-close')?.addEventListener('click', () => closeModal('modal-mockup'));
-    document.getElementById('btn-cancel-product')?.addEventListener('click', () => closeModal('modal-product'));
-    
-    // Form submit
-    document.getElementById('form-product')?.addEventListener('submit', handleProductFormSubmit);
-    
-    // AI generate description
-    document.getElementById('btn-generate-description')?.addEventListener('click', generateDescriptionWithAI);
-    
-    // Modal outside click
-    document.addEventListener('click', (e) => {
-        if (e.target.classList.contains('modal')) {
-            e.target.classList.remove('active');
-        }
-    });
-    
-    // ESC key to close modals
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            document.querySelectorAll('.modal.active').forEach(modal => {
-                modal.classList.remove('active');
-            });
-        }
-    });
-}
-
-function updateProductStats() {
-    const total = currentProducts.length;
-    const listed = currentProducts.filter(p => p.status === 'listed' || p.status === 'published').length;
-    const draft = currentProducts.filter(p => p.status === 'draft').length;
-    const totalValue = currentProducts.reduce((sum, p) => sum + parseFloat(p.price || 0), 0);
-    
-    console.log(`Stats - Total: ${total}, Listed: ${listed}, Draft: ${draft}, Value: $${totalValue.toFixed(2)}`);
-}
-
-function filterProductsByStatus(status) {
-    currentFilters.status = status;
-    applyFilters();
-}
-
-function filterProductsByCategory(category) {
-    currentFilters.category = category;
-    applyFilters();
-}
-
-function searchProducts(query) {
-    currentFilters.search = query.toLowerCase().trim();
-    applyFilters();
-}
-
-function applyFilters() {
-    const filtered = currentProducts.filter(product => {
-        // Status filter
-        if (currentFilters.status && product.status !== currentFilters.status) {
-            return false;
-        }
-        
-        // Category filter
-        if (currentFilters.category && product.category !== currentFilters.category) {
-            return false;
-        }
-        
-        // Search filter
-        if (currentFilters.search) {
-            const searchText = `${product.title || ''} ${product.description || ''} ${product.category || ''}`.toLowerCase();
-            if (!searchText.includes(currentFilters.search)) {
-                return false;
-            }
-        }
-        
-        return true;
-    });
-    
-    renderProducts(filtered);
-}
-
-// MODAL FUNCTIONS
-function showNewProductModal() {
-    resetProductForm();
-    document.getElementById('modal-product-title').textContent = 'New Product';
-    document.getElementById('modal-product').classList.add('active');
-}
-
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('active');
-    }
-}
-
-function resetProductForm() {
-    const form = document.getElementById('form-product');
-    if (form) {
-        form.reset();
-        document.getElementById('product-id').value = '';
-        document.getElementById('product-status').value = 'draft';
-    }
-}
-
-async function handleProductFormSubmit(e) {
-    e.preventDefault();
-    
-    try {
-        showLoading('Saving product...');
-        
-        const productData = {
-            user_id: currentUser.id,
-            title: document.getElementById('product-title').value.trim(),
-            category: document.getElementById('product-category').value,
-            price: parseFloat(document.getElementById('product-price').value) || 0,
-            status: document.getElementById('product-status').value,
-            description: document.getElementById('product-description').value.trim(),
-            updated_at: new Date().toISOString()
-        };
-        
-        if (!productData.title) throw new Error('Product title is required');
-        if (!productData.category) throw new Error('Category is required');
-        
-        const productId = document.getElementById('product-id').value;
-        
-        if (productId) {
-            // Update existing product
-            const { error } = await supabase
-                .from('products')
-                .update(productData)
-                .eq('id', productId)
-                .eq('user_id', currentUser.id);
-            
-            if (error) throw error;
-            showNotification('Product updated successfully', 'success');
-        } else {
-            // Create new product
-            productData.created_at = new Date().toISOString();
-            const { error } = await supabase
-                .from('products')
-                .insert([productData]);
-            
-            if (error) throw error;
-            showNotification('Product created successfully', 'success');
-        }
-        
-        closeModal('modal-product');
-        await loadUserProducts();
-        
-    } catch (error) {
-        console.error('Product save error:', error);
-        showNotification(error.message || 'Failed to save product', 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-async function editProduct(productId) {
-    try {
-        showLoading('Loading product...');
-        
-        const { data: product, error } = await supabase
-            .from('products')
-            .select('*')
-            .eq('id', productId)
-            .eq('user_id', currentUser.id)
-            .single();
-        
-        if (error) throw error;
-        
-        document.getElementById('modal-product-title').textContent = 'Edit Product';
-        document.getElementById('product-id').value = product.id;
-        document.getElementById('product-title').value = product.title || '';
-        document.getElementById('product-category').value = product.category || '';
-        document.getElementById('product-price').value = product.price || '';
-        document.getElementById('product-status').value = product.status || 'draft';
-        document.getElementById('product-description').value = product.description || '';
-        
-        document.getElementById('modal-product').classList.add('active');
-        
-    } catch (error) {
-        console.error('Product load error:', error);
-        showNotification('Failed to load product', 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-async function deleteProduct(productId) {
-    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
-        return;
-    }
-    
-    try {
-        showLoading('Deleting product...');
-        
-        const { error } = await supabase
-            .from('products')
-            .delete()
-            .eq('id', productId)
-            .eq('user_id', currentUser.id);
-        
-        if (error) throw error;
-        
-        showNotification('Product deleted successfully', 'success');
-        await loadUserProducts();
-        
-    } catch (error) {
-        console.error('Product delete error:', error);
-        showNotification('Failed to delete product', 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-// AI FUNCTIONS
-async function generateDescriptionWithAI() {
-    const title = document.getElementById('product-title').value.trim();
-    const category = document.getElementById('product-category').value;
-    
-    if (!title) {
-        showNotification('Please enter a product title first', 'warning');
-        return;
-    }
-    
-    try {
-        showLoading('Generating description with AI...');
-        
-        // Simulate AI processing
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        const descriptions = [
-            `${title} - Premium quality product made with care and attention to detail. Perfect as a gift or for personal use.`,
-            `${title} features high-quality materials and excellent craftsmanship. ${category ? `Ideal for ${category} enthusiasts.` : ''}`,
-            `Handmade ${title} with unique design elements. Each piece is carefully crafted to ensure the highest quality standards.`,
-            `${title} combines style and functionality. Made from sustainable materials and designed to last.`
-        ];
-        
-        const randomDescription = descriptions[Math.floor(Math.random() * descriptions.length)];
-        document.getElementById('product-description').value = randomDescription;
-        
-        showNotification('AI description generated successfully', 'success');
-        
-    } catch (error) {
-        console.error('AI description error:', error);
-        showNotification('Failed to generate AI description', 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-// ETSY INTEGRATION FUNCTIONS
-async function analyzeTopSellers() {
-    try {
-        showLoading('Analyzing Etsy trends...');
-        
-        await fetchTopSellersFromEtsy();
-        
-        if (topSellersData.length > 0) {
-            displayTopSellerModal(topSellersData);
-            showNotification(`Found ${topSellersData.length} trending products`, 'success');
-        } else {
-            showNotification('No trending products found', 'warning');
-        }
-        
-    } catch (error) {
-        console.error('Trend analysis error:', error);
-        showNotification('Trend analysis failed: ' + error.message, 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-async function fetchTopSellersFromEtsy() {
-    try {
-        if (!etsyService) {
-            await initializeEtsyService();
-        }
-        
-        const trendingData = await etsyService.getTrendingListings();
-        
-        topSellersData = trendingData.results.map(item => {
-            const category = extractCategoryFromTitle(item.title);
-            return {
-                id: item.listing_id.toString(),
-                title: item.title,
-                description: item.description || `${item.title} - Trending product`,
-                price: item.price?.amount || 24.99,
-                category: category,
-                tags: extractTagsFromTitle(item.title),
-                image_url: item.images?.[0]?.url_fullxfull || getRandomProductImage(category),
-                monthly_sales: calculateEstimatedSales(item),
-                trend_score: calculateTrendScore(item),
-                source: 'etsy_api',
-                listing_data: item
-            };
-        });
-        
-        // Save to database for future reference
-        await saveTrendsToDatabase(topSellersData);
-        
-    } catch (error) {
-        console.error('Top sellers fetch error:', error);
-        // Fallback to mock data
-        topSellersData = await fetchMockTopSellers();
-    }
-}
-
-function extractCategoryFromTitle(title) {
-    const categories = ['tshirt', 'mug', 'plate', 'phone-case', 'jewelry', 'wood'];
-    const titleLower = title.toLowerCase();
-    
-    for (const category of categories) {
-        if (titleLower.includes(category.replace('-', ' '))) {
-            return category;
-        }
-    }
-    
-    return categories[Math.floor(Math.random() * categories.length)];
-}
-
-function extractTagsFromTitle(title) {
-    const words = title.toLowerCase().split(/\s+/);
-    const commonTags = ['personalized', 'custom', 'handmade', 'unique', 'gift', 'vintage', 'modern', 'trending'];
-    const filtered = words.filter(word => word.length > 3 && !['the', 'and', 'with', 'for'].includes(word));
-    return [...new Set([...filtered.slice(0, 3), ...commonTags.slice(0, 2)])];
-}
-
-function calculateEstimatedSales(listing) {
-    const base = listing.favorite_count || listing.num_favorers || 0;
-    return Math.floor(base * 0.5 + (listing.views || 0) * 0.01);
-}
-
-function calculateTrendScore(listing) {
-    let score = 50;
-    const favorites = listing.favorite_count || listing.num_favorers || 0;
-    const views = listing.views || 0;
-    
-    if (favorites > 100) score += 20;
-    if (favorites > 500) score += 15;
-    if (views > 1000) score += 10;
-    if (views > 5000) score += 10;
-    
-    return Math.min(score, 95);
-}
-
-async function saveTrendsToDatabase(trends) {
-    try {
-        const marketData = trends.map(trend => ({
-            category: trend.category,
-            product_title: trend.title,
-            monthly_sales: trend.monthly_sales,
-            price_range: calculatePriceRange(trend.price),
-            competition_level: 'Medium',
-            trend_score: trend.trend_score,
-            tags: trend.tags,
-            seasonality: 'Year-round',
-            last_updated: new Date().toISOString()
-        }));
-        
-        const { error } = await supabase
-            .from('etsy_market_data')
-            .upsert(marketData, { 
-                onConflict: 'product_title',
-                ignoreDuplicates: false 
-            });
-        
-        if (error) console.error('Save trends error:', error);
-        
-    } catch (error) {
-        console.error('Trends database save error:', error);
-    }
-}
-
-function calculatePriceRange(price) {
-    if (!price) return '$20-30';
-    const base = Math.floor(price / 10) * 10;
-    return `$${base}-${base + 10}`;
-}
-
-async function fetchMockTopSellers() {
-    // Mock data from database or generate
-    const { data: marketData } = await supabase
-        .from('etsy_market_data')
-        .select('*')
-        .order('trend_score', { ascending: false })
-        .limit(10);
-    
-    if (marketData && marketData.length > 0) {
-        return marketData.map(item => ({
-            id: item.id,
-            title: item.product_title,
-            description: `${item.category} trending product`,
-            price: parsePriceRange(item.price_range),
-            category: item.category,
-            tags: item.tags || [],
-            image_url: getRandomProductImage(item.category),
-            monthly_sales: item.monthly_sales || 100,
-            trend_score: item.trend_score || 75,
-            source: 'market_data'
-        }));
-    }
-    
-    // Generate mock data
-    return generateMockTrendData();
-}
-
-function generateMockTrendData() {
-    const categories = ['tshirt', 'mug', 'plate', 'phone-case', 'jewelry', 'wood'];
-    const styles = ['Minimalist', 'Vintage', 'Modern', 'Handmade', 'Custom', 'Personalized'];
-    
-    return Array.from({ length: 8 }, (_, i) => {
-        const category = categories[Math.floor(Math.random() * categories.length)];
-        const style = styles[Math.floor(Math.random() * styles.length)];
-        
-        return {
-            id: `mock-trend-${i}`,
-            title: `${style} ${getProductTypeByCategory(category)}`,
-            description: `Trending ${category} product with ${style.toLowerCase()} design`,
-            price: (15 + Math.random() * 35).toFixed(2),
-            category: category,
-            tags: [style.toLowerCase(), 'trending', 'popular'],
-            image_url: getRandomProductImage(category),
-            monthly_sales: Math.floor(Math.random() * 200) + 50,
-            trend_score: 70 + Math.random() * 25,
-            source: 'mock'
-        };
-    });
-}
-
-function getProductTypeByCategory(category) {
-    const types = {
-        'tshirt': 'T-Shirt',
-        'mug': 'Coffee Mug',
-        'plate': 'Decorative Plate',
-        'phone-case': 'Phone Case',
-        'jewelry': 'Necklace',
-        'wood': 'Wood Art'
-    };
-    return types[category] || 'Product';
-}
-
-function parsePriceRange(priceRange) {
-    if (!priceRange) return 24.99;
-    const match = priceRange.match(/\$?(\d+)-?(\d+)?/);
-    if (match) {
-        if (match[2]) {
-            return (parseFloat(match[1]) + parseFloat(match[2])) / 2;
-        }
-        return parseFloat(match[1]) + 5;
-    }
-    return 24.99;
-}
-
-function displayTopSellerModal(trends) {
-    const container = document.getElementById('top-seller-modal-container');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="modal active" id="top-seller-modal">
-            <div class="modal-content" style="max-width: 1200px;">
-                <button class="modal-close" onclick="closeTopSellerModal()">&times;</button>
-                <div class="modal-header">
-                    <h2 class="modal-title">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; margin-right: 8px;">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
-                        </svg>
-                        Trending Products Analysis
-                    </h2>
-                    <p class="modal-subtitle">${trends.length} trending products found</p>
-                </div>
-                
-                <div style="padding: 20px; background: #f9fafb; border-radius: 8px; margin-bottom: 20px;">
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button onclick="filterTrends('all')" class="btn btn-primary btn-sm">All</button>
-                        <button onclick="filterTrends('high_trend')" class="btn btn-outline btn-sm">
-                            High Trend (80+)
-                        </button>
-                        <button onclick="filterTrends('high_sales')" class="btn btn-outline btn-sm">
-                            High Sales (150+)
-                        </button>
-                    </div>
-                </div>
-                
-                <div id="trends-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; max-height: 600px; overflow-y: auto; padding: 10px;">
-                    ${trends.map((trend, index) => `
-                        <div class="product-card" data-trend-index="${index}" data-score="${trend.trend_score}" data-sales="${trend.monthly_sales}">
-                            <div class="product-image">
-                                <img src="${trend.image_url}" alt="${trend.title}" style="width: 100%; height: 200px; object-fit: cover;">
-                                <div class="product-badge" style="background: ${trend.trend_score >= 90 ? '#dc2626' : trend.trend_score >= 80 ? '#ea580c' : '#16a34a'};">
-                                    ${trend.trend_score.toFixed(1)}
-                                </div>
-                                <div class="price-badge">$${parseFloat(trend.price).toFixed(2)}</div>
-                            </div>
-                            <div class="product-content">
-                                <div class="product-header">
-                                    <h3 class="product-title">${truncateText(trend.title, 40)}</h3>
-                                </div>
-                                <span class="product-category">${trend.category}</span>
-                                <p class="product-description">${truncateText(trend.description, 80)}</p>
-                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px;">
-                                    📈 ${trend.monthly_sales} sales/month
-                                </div>
-                                <div class="product-actions">
-                                    <button class="btn btn-primary btn-sm" onclick="createProductFromTrend(${index})" style="flex: 1;">
-                                        Create from Trend
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                
-                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
-                    <button onclick="closeTopSellerModal()" class="btn btn-outline">
-                        Close
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-// Global functions for modal
-window.closeTopSellerModal = function() {
-    const modal = document.getElementById('top-seller-modal');
-    if (modal) {
-        modal.classList.remove('active');
-        setTimeout(() => {
-            document.getElementById('top-seller-modal-container').innerHTML = '';
-        }, 300);
-    }
-};
-
-window.filterTrends = function(filter) {
-    const cards = document.querySelectorAll('#trends-grid .product-card');
-    
-    cards.forEach(card => {
-        const score = parseFloat(card.dataset.score);
-        const sales = parseInt(card.dataset.sales);
-        
-        let show = true;
-        
-        if (filter === 'high_trend') {
-            show = score >= 80;
-        } else if (filter === 'high_sales') {
-            show = sales >= 150;
-        }
-        
-        card.style.display = show ? '' : 'none';
-    });
-};
-
-window.createProductFromTrend = async function(index) {
-    const trend = topSellersData[index];
-    if (!trend) return;
-    
-    try {
-        showLoading('Creating product from trend...');
-        
-        const newProduct = {
-            user_id: currentUser.id,
-            title: trend.title,
-            description: trend.description,
-            category: trend.category,
-            price: parseFloat(trend.price),
-            images: [trend.image_url],
-            tags: trend.tags,
-            status: 'draft',
-            metadata: { 
-                source: 'trend_analysis', 
-                trend_score: trend.trend_score,
-                monthly_sales: trend.monthly_sales 
-            },
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        };
-        
-        const { error } = await supabase
-            .from('products')
-            .insert([newProduct]);
-        
-        if (error) throw error;
-        
-        showNotification('Product created successfully from trend!', 'success');
-        closeTopSellerModal();
-        await loadUserProducts();
-        
-    } catch (error) {
-        console.error('Create from trend error:', error);
-        showNotification('Failed to create product: ' + error.message, 'error');
-    } finally {
-        hideLoading();
-    }
-};
-
-// PUBLISH TO ETSY
-async function publishProductToEtsy(productId) {
-    try {
-        showLoading('Publishing to Etsy...');
-        
-        // Get product data
-        const { data: product } = await supabase
-            .from('products')
-            .select('*')
-            .eq('id', productId)
-            .single();
-        
-        if (!product) {
-            throw new Error('Product not found');
-        }
-        
-        // Check if Etsy service is available
-        if (!etsyService) {
-            await initializeEtsyService();
-        }
-        
-        // Prepare listing data
-        const listingData = {
-            quantity: 1,
-            title: product.title,
-            description: product.description || `${product.title} - High quality handmade product`,
-            price: parseFloat(product.price),
-            who_made: 'i_did',
-            when_made: 'made_to_order',
-            taxonomy_id: getEtsyTaxonomyId(product.category),
-            tags: product.tags || ['handmade', 'custom', 'personalized'],
-            materials: ['premium materials'],
-            style: [product.category],
-            is_supply: false,
-            shipping_profile_id: 1 // Default shipping profile
-        };
-        
-        // Create listing on Etsy
-        const listingResult = await etsyService.createListing(listingData);
-        
-        if (!listingResult.listing_id) {
-            throw new Error('Failed to create Etsy listing');
-        }
-        
-        // Update product with Etsy listing ID
-        const { error } = await supabase
-            .from('products')
-            .update({
-                status: 'listed',
-                etsy_listing_id: listingResult.listing_id.toString(),
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', productId);
-        
-        if (error) throw error;
-        
-        showNotification('Product published to Etsy successfully!', 'success');
-        await loadUserProducts();
-        
-    } catch (error) {
-        console.error('Publish to Etsy error:', error);
-        showNotification(`Failed to publish to Etsy: ${error.message}`, 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-function getEtsyTaxonomyId(category) {
-    const taxonomyMap = {
-        'tshirt': 1156,
-        'mug': 1157,
-        'plate': 1158,
-        'phone-case': 1159,
-        'jewelry': 1160,
-        'wood': 1161
-    };
-    return taxonomyMap[category] || 1156;
-}
-
-// SIMILAR PRODUCT GENERATION
-async function generateSimilarProduct(productId) {
-    try {
-        showLoading('Generating similar product...');
-        
-        // Get original product
-        const { data: originalProduct } = await supabase
-            .from('products')
-            .select('*')
-            .eq('id', productId)
-            .single();
-        
-        if (!originalProduct) {
-            throw new Error('Original product not found');
-        }
-        
-        // Generate variation
-        const variation = getRandomVariation();
-        const newPrice = calculateVariedPrice(originalProduct.price);
-        
-        const newProduct = {
-            user_id: currentUser.id,
-            title: `${variation.style} ${originalProduct.title}`,
-            description: `${variation.style} version: ${originalProduct.description || 'Similar product with different style'}`,
-            category: originalProduct.category,
-            price: newPrice,
-            images: [getRandomProductImage(originalProduct.category)],
-            tags: [...(originalProduct.tags || []), variation.style, 'variation'],
-            status: 'draft',
-            metadata: {
-                original_product_id: originalProduct.id,
-                variation: variation
-            },
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        };
-        
-        const { error } = await supabase
-            .from('products')
-            .insert([newProduct]);
-        
-        if (error) throw error;
-        
-        showNotification('Similar product created successfully!', 'success');
-        await loadUserProducts();
-        
-    } catch (error) {
-        console.error('Similar product error:', error);
-        showNotification('Failed to create similar product: ' + error.message, 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-function getRandomVariation() {
-    const variations = [
-        { style: 'Minimalist', colors: ['black', 'white'] },
-        { style: 'Vintage', colors: ['brown', 'cream'] },
-        { style: 'Modern', colors: ['gray', 'blue'] },
-        { style: 'Colorful', colors: ['red', 'yellow', 'blue'] },
-        { style: 'Premium', colors: ['gold', 'silver'] }
-    ];
-    return variations[Math.floor(Math.random() * variations.length)];
-}
-
-function calculateVariedPrice(originalPrice) {
-    const variation = (Math.random() * 0.3) - 0.15; // -15% to +15%
-    return parseFloat((originalPrice * (1 + variation)).toFixed(2));
-}
-
-// MOCKUP GENERATION
-async function generateProductMockups(productId) {
-    try {
-        showLoading('Generating mockups...');
-        
-        // Generate mock mockup URLs
-        const mockupUrls = generateMockMockups();
-        
-        // Update product with mockup URLs
-        const { error } = await supabase
-            .from('products')
-            .update({ mockup_urls: mockupUrls })
-            .eq('id', productId);
-        
-        if (error) throw error;
-        
-        // Open mockup modal
-        openMockupModal(productId, mockupUrls);
-        
-        showNotification('Mockups generated successfully!', 'success');
-        
-    } catch (error) {
-        console.error('Mockup generation error:', error);
-        showNotification('Failed to generate mockups: ' + error.message, 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-function generateMockMockups() {
-    const angles = ['front', 'back', 'side', 'perspective', 'flat'];
-    const styles = ['lifestyle', 'studio', 'natural', 'minimal'];
-    
-    return angles.map(angle => ({
-        url: `https://via.placeholder.com/600x800/ea580c/ffffff?text=Mockup+${angle}`,
-        angle: angle,
-        style: styles[Math.floor(Math.random() * styles.length)],
-        created_at: new Date().toISOString()
-    }));
-}
-
-function openMockupModal(productId, mockupUrls = []) {
-    const mockupContainer = document.getElementById('mockup-editor-container');
-    
-    if (mockupContainer) {
-        mockupContainer.innerHTML = `
-            <div class="mockup-editor">
-                <h3 style="margin-bottom: 16px; font-size: 18px; font-weight: 600;">Product Mockups</h3>
-                
-                <div class="mockup-preview">
-                    ${mockupUrls.length > 0 ? `
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; width: 100%; padding: 10px;">
-                            ${mockupUrls.map((mockup, index) => `
-                                <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: white;">
-                                    <img src="${mockup.url}" alt="Mockup ${index + 1}" style="width: 100%; height: 120px; object-fit: cover; border-bottom: 1px solid #e5e7eb;">
-                                    <div style="padding: 8px; font-size: 11px; color: #6b7280; text-align: center;">
-                                        ${mockup.angle} - ${mockup.style}
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : `
-                        <div style="text-align: center; color: #6b7280; padding: 40px;">
-                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                            </svg>
-                            <p style="margin-top: 16px; font-weight: 500;">No mockups generated yet</p>
-                        </div>
-                    `}
-                </div>
-                
-                <div class="mockup-controls">
-                    <div class="control-group">
-                        <label class="control-label">Mockup Style</label>
-                        <select class="control-input" id="mockup-style">
-                            <option value="lifestyle">Lifestyle</option>
-                            <option value="studio">Studio</option>
-                            <option value="natural">Natural</option>
-                            <option value="minimal">Minimal</option>
-                        </select>
-                    </div>
-                    <div class="control-group">
-                        <label class="control-label">Background</label>
-                        <select class="control-input" id="mockup-background">
-                            <option value="white">White</option>
-                            <option value="gray">Gray</option>
-                            <option value="scene">Scene</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="form-actions">
-                    <button class="btn btn-primary btn-flex" onclick="regenerateMockups('${productId}')">
-                        Regenerate Mockups
-                    </button>
-                    <button class="btn btn-outline btn-flex" onclick="closeModal('modal-mockup')">
-                        Close
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-    
-    document.getElementById('modal-mockup').classList.add('active');
-}
-
-window.regenerateMockups = async function(productId) {
-    await generateProductMockups(productId);
-};
-
-// UTILITY FUNCTIONS
-function getProductStatusClass(status) {
-    const classMap = {
-        'draft': 'status-draft',
-        'listed': 'status-listed',
-        'published': 'status-listed',
-        'archived': 'status-archived'
-    };
-    return classMap[status] || 'status-draft';
-}
-
-function getProductStatusText(status) {
-    const textMap = {
-        'draft': 'Draft',
-        'listed': 'Listed',
-        'published': 'Published',
-        'archived': 'Archived'
-    };
-    return textMap[status] || status;
-}
-
-function truncateText(text, maxLength) {
-    if (!text) return '';
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// LOADING AND NOTIFICATION
-function showLoading(message = 'Loading...') {
-    let loadingEl = document.getElementById('loadingOverlay');
-    if (!loadingEl) {
-        loadingEl = document.createElement('div');
-        loadingEl.id = 'loadingOverlay';
-        loadingEl.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-        `;
-        loadingEl.innerHTML = `
-            <div style="background: white; padding: 24px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; min-width: 200px;">
-                <div class="loading-spinner" style="width: 40px; height: 40px; border: 3px solid #f3f4f6; border-top-color: #ea580c; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px;"></div>
-                <p style="color: #374151; font-weight: 500;">${message}</p>
-            </div>
-        `;
-        document.body.appendChild(loadingEl);
-    }
-}
-
-function hideLoading() {
-    const loadingEl = document.getElementById('loadingOverlay');
-    if (loadingEl) {
-        loadingEl.remove();
-    }
-}
-
-function showNotification(message, type = 'info') {
-    // Remove existing notifications
-    document.querySelectorAll('.notification').forEach(el => el.remove());
-    
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.style.cssText = `
+    <!-- Custom CSS -->
+    <style>
+      /* Reset & Base Styles */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        font-family: 'Inter', sans-serif;
+        background: #f9fafb;
+        color: #374151;
+        line-height: 1.5;
+        overflow-x: hidden;
+      }
+      
+      /* Dashboard Layout */
+      .dashboard-container {
+        min-height: 100vh;
+      }
+      
+      .dashboard-layout {
+        display: flex;
+        min-height: 100vh;
+      }
+      
+      /* Sidebar */
+      .dashboard-sidebar {
+        width: 260px;
+        background: white;
+        border-right: 1px solid #e5e7eb;
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+      }
+      
+      .sidebar-header {
+        padding: 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      
+      .sidebar-logo {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #ea580c, #dc2626);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+      }
+      
+      .sidebar-logo svg {
+        width: 24px;
+        height: 24px;
+      }
+      
+      .sidebar-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #18181b;
+      }
+      
+      .sidebar-subtitle {
+        font-size: 11px;
+        color: #ea580c;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin-top: 2px;
+      }
+      
+      .sidebar-nav {
+        flex: 1;
+        padding: 24px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      
+      .sidebar-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        color: #6b7280;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+      }
+      
+      .sidebar-nav-item:hover {
+        background: #f3f4f6;
+        color: #374151;
+      }
+      
+      .sidebar-nav-item.active {
+        background: #fef7f0;
+        color: #ea580c;
+        font-weight: 600;
+      }
+      
+      .sidebar-nav-item svg {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+      }
+      
+      .sidebar-user {
+        padding: 20px 16px;
+        border-top: 1px solid #e5e7eb;
+        background: #f9fafb;
+      }
+      
+      .user-avatar {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #ea580c, #dc2626);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        flex-shrink: 0;
+      }
+      
+      /* Main Content */
+      .dashboard-main {
+        flex: 1;
+        padding: 32px;
+        overflow-y: auto;
+      }
+      
+      /* Products Header */
+      .products-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 32px;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      
+      .products-title {
+        flex: 1;
+        min-width: 300px;
+      }
+      
+      .products-title h1 {
+        font-size: 32px;
+        font-weight: 700;
+        color: #18181b;
+        margin-bottom: 8px;
+      }
+      
+      .products-title p {
+        color: #6b7280;
+        font-size: 16px;
+      }
+      
+      .header-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      
+      /* Status Badge */
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        background: #10b981;
+        color: white;
+      }
+      
+      .status-badge.inactive {
+        background: #6b7280;
+      }
+      
+      .status-badge svg {
+        width: 14px;
+        height: 14px;
+      }
+      
+      /* Products Grid */
+      .products-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+      }
+      
+      /* Product Card */
+      .product-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      
+      .product-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(234, 88, 12, 0.15);
+        border-color: #fdba74;
+      }
+      
+      .product-image {
+        height: 200px;
+        background: linear-gradient(135deg, #fef3f2, #fef7f0);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+      }
+      
+      .product-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      
+      .product-image-placeholder {
+        text-align: center;
+        color: #ea580c;
+        padding: 20px;
+      }
+      
+      .product-image-placeholder svg {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 12px;
+      }
+      
+      .product-image-placeholder p {
+        font-size: 14px;
+        font-weight: 500;
+      }
+      
+      .product-badge {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: linear-gradient(135deg, #ea580c, #dc2626);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        z-index: 2;
+      }
+      
+      .etsy-badge {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        background: #fbbf24;
+        color: black;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        z-index: 2;
+      }
+      
+      .etsy-badge svg {
+        width: 12px;
+        height: 12px;
+      }
+      
+      .price-badge {
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      
+      .product-content {
+        padding: 20px;
+      }
+      
+      .product-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+        gap: 12px;
+      }
+      
+      .product-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #18181b;
+        line-height: 1.4;
+        flex: 1;
+        margin: 0;
+      }
+      
+      .product-price {
+        font-size: 18px;
+        font-weight: 700;
+        color: #ea580c;
+        white-space: nowrap;
+      }
+      
+      .product-category {
+        display: inline-block;
+        background: #f0f9ff;
+        color: #0ea5e9;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        margin-bottom: 12px;
+      }
+      
+      .product-description {
+        color: #6b7280;
+        font-size: 14px;
+        line-height: 1.5;
+        margin-bottom: 16px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      
+      .product-rating {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      
+      .product-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      
+      /* Button Styles */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        justify-content: center;
+        white-space: nowrap;
+      }
+      
+      .btn-primary {
+        background: #ea580c;
+        color: white;
+      }
+      
+      .btn-primary:hover {
+        background: #c2410c;
+        transform: translateY(-1px);
+      }
+      
+      .btn-outline {
+        background: transparent;
+        border: 1px solid #d1d5db;
+        color: #374151;
+      }
+      
+      .btn-outline:hover {
+        border-color: #ea580c;
+        color: #ea580c;
+        background: #fef7f0;
+        transform: translateY(-1px);
+      }
+      
+      .btn-sm {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+      
+      .btn-flex {
+        flex: 1;
+      }
+      
+      /* Filters */
+      .products-filters {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      
+      .filter-group {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      
+      .filter-label {
+        font-size: 14px;
+        font-weight: 500;
+        color: #374151;
+        white-space: nowrap;
+      }
+      
+      .select-input, .form-input {
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        background: white;
+        min-width: 150px;
+      }
+      
+      .select-input:focus, .form-input:focus {
+        outline: none;
+        border-color: #ea580c;
+        box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
+      }
+      
+      /* Empty State */
+      .products-empty {
+        text-align: center;
+        padding: 80px 24px;
+        background: white;
+        border: 2px dashed #e5e7eb;
+        border-radius: 16px;
+      }
+      
+      .empty-icon {
+        width: 64px;
+        height: 64px;
+        background: #fef7f0;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+      }
+      
+      .empty-icon svg {
+        width: 32px;
+        height: 32px;
+        color: #ea580c;
+      }
+      
+      .empty-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #18181b;
+        margin-bottom: 8px;
+      }
+      
+      .empty-description {
+        color: #6b7280;
+        font-size: 14px;
+        margin-bottom: 24px;
+      }
+      
+      /* Modal Styles */
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      
+      .modal.active {
+        display: flex;
+      }
+      
+      .modal-content {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        position: relative;
+        max-height: 90vh;
+        overflow-y: auto;
+        width: 100%;
+        max-width: 600px;
+      }
+      
+      .modal-close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #6b7280;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+      }
+      
+      .modal-close:hover {
+        background: #f3f4f6;
+      }
+      
+      .modal-header {
+        margin-bottom: 24px;
+      }
+      
+      .modal-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: #18181b;
+        margin-bottom: 8px;
+      }
+      
+      .modal-subtitle {
+        color: #6b7280;
+        font-size: 14px;
+      }
+      
+      /* Form Styles */
+      .form-group {
+        margin-bottom: 16px;
+      }
+      
+      .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #374151;
+        font-size: 14px;
+      }
+      
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      
+      textarea.form-input {
+        resize: vertical;
+        min-height: 100px;
+        font-family: 'Inter', sans-serif;
+      }
+      
+      /* AI Buttons */
+      .ai-buttons {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      
+      .ai-button {
+        font-size: 12px !important;
+        padding: 4px 8px !important;
+      }
+      
+      .form-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 24px;
+      }
+      
+      /* Mockup Modal */
+      .mockup-editor {
+        background: #fafafa;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 20px;
+      }
+      
+      .mockup-preview {
+        height: 300px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+        overflow: auto;
+      }
+      
+      .mockup-controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+      }
+      
+      .control-group {
+        margin-bottom: 16px;
+      }
+      
+      .control-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #374151;
+        font-size: 14px;
+      }
+      
+      .control-input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        background: white;
+      }
+      
+      /* Product Status Badges */
+      .status-draft { background: #fffbeb; color: #d97706; }
+      .status-listed { background: #f0fdf4; color: #059669; }
+      .status-published { background: #f0fdf4; color: #059669; }
+      .status-archived { background: #f3f4f6; color: #6b7280; }
+      
+      /* Utility Classes */
+      .hidden {
+        display: none !important;
+      }
+      
+      .bg-blue-100 { background-color: #dbeafe; }
+      .text-blue-800 { color: #1e40af; }
+      
+      /* Loading Animation */
+      .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba(255,255,255,.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      
+      /* Notification */
+      .notification {
         position: fixed;
         top: 20px;
         right: 20px;
@@ -1296,30 +700,359 @@ function showNotification(message, type = 'info') {
         z-index: 10000;
         animation: slideIn 0.3s ease;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    `;
-    
-    notification.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between; min-width: 200px;">
-            <span>${message}</span>
-            <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px; margin-left: 12px; padding: 0 4px;">
-                &times;
-            </button>
-        </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        if (notification.parentElement) {
-            notification.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => notification.remove(), 300);
+      }
+      
+      .notification.success { background: #10b981; }
+      .notification.error { background: #ef4444; }
+      .notification.warning { background: #f59e0b; }
+      .notification.info { background: #3b82f6; }
+      
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      
+      @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+      }
+      
+      /* Responsive */
+      @media (max-width: 768px) {
+        .dashboard-layout {
+          flex-direction: column;
         }
-    }, 5000);
-}
+        
+        .dashboard-sidebar {
+          width: 100%;
+          border-right: none;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .sidebar-nav {
+          flex-direction: row;
+          overflow-x: auto;
+          padding: 16px;
+        }
+        
+        .sidebar-nav-item {
+          white-space: nowrap;
+        }
+        
+        .dashboard-main {
+          padding: 24px;
+        }
+        
+        .products-header {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        
+        .header-actions {
+          justify-content: stretch;
+        }
+        
+        .products-grid {
+          grid-template-columns: 1fr;
+        }
+        
+        .form-row {
+          grid-template-columns: 1fr;
+        }
+        
+        .products-filters {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        
+        .filter-group {
+          justify-content: space-between;
+        }
+        
+        .product-actions {
+          flex-direction: column;
+        }
+      }
+      
+      @media (max-width: 480px) {
+        .products-title h1 {
+          font-size: 24px;
+        }
+        
+        .header-actions {
+          flex-direction: column;
+        }
+        
+        .modal-content {
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  
+  <body class="dashboard-container">
+    <div class="dashboard-layout">
+      <!-- Sidebar -->
+      <aside class="dashboard-sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-logo">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="sidebar-title">Etsy AI POD</div>
+            <div class="sidebar-subtitle">PREMIUM PLATFORM</div>
+          </div>
+        </div>
 
-// Make functions globally available
-window.closeModal = closeModal;
-window.showNotification = showNotification;
+        <nav class="sidebar-nav">
+          <a href="/dashboard.html" class="sidebar-nav-item">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+            </svg>
+            Dashboard
+          </a>
+          <a href="/products.html" class="sidebar-nav-item active">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+            </svg>
+            Products
+          </a>
+          <a href="/orders.html" class="sidebar-nav-item">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+            </svg>
+            Orders
+          </a>
+          <a href="/payments.html" class="sidebar-nav-item">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+            </svg>
+            Payments
+          </a>
+          <a href="/ai-assistant.html" class="sidebar-nav-item">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            AI Assistant
+          </a>
+          <a href="/settings.html" class="sidebar-nav-item">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            Settings
+          </a>
+        </nav>
 
-console.log('Products.js fully loaded and ready');
+        <div class="sidebar-user">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div class="user-avatar" id="user-avatar">JD</div>
+            <div>
+              <div style="font-weight: 600; color: #18181b;" id="user-name">John Doe</div>
+              <div style="font-size: 12px; color: #6b7280;" id="user-email">admin@example.com</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="dashboard-main">
+        <!-- Header -->
+        <header class="products-header">
+          <div class="products-title">
+            <h1>Products</h1>
+            <p>Manage your product catalog and generate mockups</p>
+          </div>
+          <div class="header-actions" id="header-actions">
+            <button class="btn btn-outline" id="btn-analyze-top-sellers">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+              </svg>
+              Analyze Top Sellers
+            </button>
+            <button class="btn btn-primary" id="btn-new-product">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+              </svg>
+              New Product
+            </button>
+          </div>
+        </header>
+
+        <!-- Search Bar -->
+        <div style="margin-bottom: 24px;">
+          <input 
+            type="text" 
+            id="search-products" 
+            placeholder="Search products..."
+            class="form-input"
+            style="width: 100%; max-width: 400px;"
+          />
+        </div>
+
+        <!-- Filters -->
+        <div class="products-filters">
+          <div class="filter-group">
+            <label class="filter-label">Status:</label>
+            <select class="select-input" id="filter-status">
+              <option value="">All Status</option>
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+          
+          <div class="filter-group">
+            <label class="filter-label">Category:</label>
+            <select class="select-input" id="filter-category">
+              <option value="">All Categories</option>
+              <option value="tshirt">T-Shirt</option>
+              <option value="mug">Mug</option>
+              <option value="plate">Plate</option>
+              <option value="phone-case">Phone Case</option>
+              <option value="jewelry">Jewelry</option>
+              <option value="wood">Wood Product</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div class="products-grid" id="products-grid">
+          <!-- Products will be loaded here -->
+        </div>
+
+        <!-- Empty State -->
+        <div class="products-empty hidden" id="products-empty">
+          <div class="empty-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+            </svg>
+          </div>
+          <h3 class="empty-title">No products yet</h3>
+          <p class="empty-description">Create your first product to get started with your Etsy POD business</p>
+          <button class="btn btn-primary" id="btn-empty-new-product">
+            Create First Product
+          </button>
+        </div>
+      </main>
+    </div>
+
+    <!-- Product Modal -->
+    <div class="modal" id="modal-product">
+      <div class="modal-content" style="max-width: 600px;">
+        <button class="modal-close" id="modal-product-close">&times;</button>
+        <div class="modal-header">
+          <h2 class="modal-title" id="modal-product-title">New Product</h2>
+          <p class="modal-subtitle">Add a new product to your catalog</p>
+        </div>
+        
+        <form id="form-product">
+          <input type="hidden" id="product-id" />
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="product-title">Product Title</label>
+              <input
+                type="text"
+                id="product-title"
+                required
+                placeholder="Enter product title"
+                class="form-input"
+              />
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label" for="product-category">Category</label>
+              <select
+                id="product-category"
+                required
+                class="select-input"
+              >
+                <option value="">Select category</option>
+                <option value="tshirt">T-Shirt</option>
+                <option value="mug">Mug</option>
+                <option value="plate">Plate</option>
+                <option value="phone-case">Phone Case</option>
+                <option value="jewelry">Jewelry</option>
+                <option value="wood">Wood Product</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="product-price">Price (USD)</label>
+              <input
+                type="number"
+                id="product-price"
+                step="0.01"
+                min="0"
+                required
+                placeholder="0.00"
+                class="form-input"
+              />
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label" for="product-status">Status</label>
+              <select
+                id="product-status"
+                class="select-input"
+              >
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="product-description">Description</label>
+            <textarea
+              id="product-description"
+              rows="4"
+              placeholder="Enter product description..."
+              class="form-input"
+            ></textarea>
+            <div class="ai-buttons">
+              <button type="button" class="btn btn-outline btn-sm ai-button" id="btn-generate-description">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="12" height="12">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                AI Generate
+              </button>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-flex">Save Product</button>
+            <button type="button" class="btn btn-outline btn-flex" id="btn-cancel-product">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Mockup Generation Modal -->
+    <div class="modal" id="modal-mockup">
+      <div class="modal-content" style="max-width: 800px;">
+        <button class="modal-close" id="modal-mockup-close">&times;</button>
+        <div class="modal-header">
+          <h2 class="modal-title">Generate Mockups</h2>
+          <p class="modal-subtitle">Create professional product mockups for your designs</p>
+        </div>
+        
+        <div id="mockup-editor-container">
+          <!-- Mockup editor will be loaded here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Sellers Modal (Dynamic) -->
+    <div id="top-seller-modal-container"></div>
+
+    <!-- JavaScript -->
+    <script src="/assets/js/products.js"></script>
+  </body>
+</html>
