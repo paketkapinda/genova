@@ -11,845 +11,599 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Custom CSS -->
-    
-    <!-- CSS for new elements -->
-    <style>
-      /* Reset & Base Styles */
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      
-      body {
-        font-family: 'Inter', sans-serif;
-        background: #f9fafb;
-        color: #374151;
-        line-height: 1.5;
-        overflow-x: hidden;
-      }
-      
-      /* Dashboard Layout */
-      .dashboard-container {
-        min-height: 100vh;
-      }
-      
-      .dashboard-layout {
-        display: flex;
-        min-height: 100vh;
-      }
-      
-      /* Sidebar */
-      .dashboard-sidebar {
-        width: 260px;
-        background: white;
-        border-right: 1px solid #e5e7eb;
-        display: flex;
-        flex-direction: column;
-        flex-shrink: 0;
-      }
-      
-      .sidebar-header {
-        padding: 24px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        border-bottom: 1px solid #e5e7eb;
-      }
-      
-      .sidebar-logo {
-        width: 40px;
-        height: 40px;
-        background: linear-gradient(135deg, #ea580c, #dc2626);
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-      }
-      
-      .sidebar-logo svg {
-        width: 24px;
-        height: 24px;
-      }
-      
-      .sidebar-title {
-        font-size: 18px;
-        font-weight: 700;
-        color: #18181b;
-      }
-      
-      .sidebar-subtitle {
-        font-size: 11px;
-        color: #ea580c;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-        margin-top: 2px;
-      }
-      
-      .sidebar-nav {
-        flex: 1;
-        padding: 24px 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-      
-      .sidebar-nav-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px 16px;
-        color: #6b7280;
-        text-decoration: none;
-        border-radius: 8px;
-        font-weight: 500;
-        transition: all 0.2s ease;
-      }
-      
-      .sidebar-nav-item:hover {
-        background: #f3f4f6;
-        color: #374151;
-      }
-      
-      .sidebar-nav-item.active {
-        background: #fef7f0;
-        color: #ea580c;
-        font-weight: 600;
-      }
-      
-      .sidebar-nav-item svg {
-        width: 20px;
-        height: 20px;
-        flex-shrink: 0;
-      }
-      
-      .sidebar-user {
-        padding: 20px 16px;
-        border-top: 1px solid #e5e7eb;
-        background: #f9fafb;
-      }
-      
-      .user-avatar {
-        width: 40px;
-        height: 40px;
-        background: linear-gradient(135deg, #ea580c, #dc2626);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: 600;
-        flex-shrink: 0;
-      }
-      
-      /* Main Content */
-      .dashboard-main {
-        flex: 1;
-        padding: 32px;
-        overflow-y: auto;
-      }
-      
-      /* Products Header */
-      .products-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 32px;
-        gap: 16px;
-        flex-wrap: wrap;
-      }
-      
-      .products-title {
-        flex: 1;
-        min-width: 300px;
-      }
-      
-      .products-title h1 {
-        font-size: 32px;
-        font-weight: 700;
-        color: #18181b;
-        margin-bottom: 8px;
-      }
-      
-      .products-title p {
-        color: #6b7280;
-        font-size: 16px;
-      }
-      
-      .header-actions {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-      
-      /* Status Badge */
-      .status-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 12px;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 600;
-        background: #10b981;
-        color: white;
-      }
-      
-      .status-badge.inactive {
-        background: #6b7280;
-      }
-      
-      .status-badge svg {
-        width: 14px;
-        height: 14px;
-      }
-      
-      /* Products Grid */
-      .products-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 24px;
-        margin-bottom: 32px;
-      }
-      
-      /* Product Card */
-      .product-card {
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 16px;
-        overflow: hidden;
-        transition: all 0.3s ease;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      }
-      
-      .product-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 32px rgba(234, 88, 12, 0.15);
-        border-color: #fdba74;
-      }
-      
-      .product-image {
-        height: 200px;
-        background: linear-gradient(135deg, #fef3f2, #fef7f0);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        overflow: hidden;
-      }
-      
-      .product-image img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-      
-      .product-image-placeholder {
-        text-align: center;
-        color: #ea580c;
-        padding: 20px;
-      }
-      
-      .product-image-placeholder svg {
-        width: 48px;
-        height: 48px;
-        margin-bottom: 12px;
-      }
-      
-      .product-image-placeholder p {
-        font-size: 14px;
-        font-weight: 500;
-      }
-      
-      .product-badge {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        background: linear-gradient(135deg, #ea580c, #dc2626);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 11px;
-        font-weight: 600;
-        z-index: 2;
-      }
-      
-      .etsy-badge {
-        position: absolute;
-        top: 12px;
-        left: 12px;
-        background: #fbbf24;
-        color: black;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 11px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        z-index: 2;
-      }
-      
-      .etsy-badge svg {
-        width: 12px;
-        height: 12px;
-      }
-      
-      .price-badge {
-        position: absolute;
-        bottom: 12px;
-        left: 12px;
-        background: rgba(0,0,0,0.7);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 600;
-      }
-      
-      .product-content {
-        padding: 20px;
-      }
-      
-      .product-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 12px;
-        gap: 12px;
-      }
-      
-      .product-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: #18181b;
-        line-height: 1.4;
-        flex: 1;
-        margin: 0;
-      }
-      
-      .product-price {
-        font-size: 18px;
-        font-weight: 700;
-        color: #ea580c;
-        white-space: nowrap;
-      }
-      
-      .product-category {
-        display: inline-block;
-        background: #f0f9ff;
-        color: #0ea5e9;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 500;
-        margin-bottom: 12px;
-      }
-      
-      .product-description {
-        color: #6b7280;
-        font-size: 14px;
-        line-height: 1.5;
-        margin-bottom: 16px;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-      
-      .product-rating {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 12px;
-      }
-      
-      .product-actions {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      
-      /* Button Styles */
-      .btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 16px;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
-        border: none;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        text-decoration: none;
-        justify-content: center;
-        white-space: nowrap;
-      }
-      
-      .btn-primary {
-        background: #ea580c;
-        color: white;
-      }
-      
-      .btn-primary:hover {
-        background: #c2410c;
-        transform: translateY(-1px);
-      }
-      
-      .btn-outline {
-        background: transparent;
-        border: 1px solid #d1d5db;
-        color: #374151;
-      }
-      
-      .btn-outline:hover {
-        border-color: #ea580c;
-        color: #ea580c;
-        background: #fef7f0;
-        transform: translateY(-1px);
-      }
-      
-      .btn-sm {
-        padding: 6px 12px;
-        font-size: 12px;
-      }
-      
-      .btn-flex {
-        flex: 1;
-      }
-      
-      /* Filters */
-      .products-filters {
-        display: flex;
-        gap: 16px;
-        margin-bottom: 24px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-      
-      .filter-group {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-      }
-      
-      .filter-label {
-        font-size: 14px;
-        font-weight: 500;
-        color: #374151;
-        white-space: nowrap;
-      }
-      
-      .select-input, .form-input {
-        padding: 8px 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        font-size: 14px;
-        background: white;
-        min-width: 150px;
-      }
-      
-      .select-input:focus, .form-input:focus {
-        outline: none;
-        border-color: #ea580c;
-        box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
-      }
-      
-      /* Empty State */
-      .products-empty {
-        text-align: center;
-        padding: 80px 24px;
-        background: white;
-        border: 2px dashed #e5e7eb;
-        border-radius: 16px;
-      }
-      
-      .empty-icon {
-        width: 64px;
-        height: 64px;
-        background: #fef7f0;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 20px;
-      }
-      
-      .empty-icon svg {
-        width: 32px;
-        height: 32px;
-        color: #ea580c;
-      }
-      
-      .empty-title {
-        font-size: 18px;
-        font-weight: 600;
-        color: #18181b;
-        margin-bottom: 8px;
-      }
-      
-      .empty-description {
-        color: #6b7280;
-        font-size: 14px;
-        margin-bottom: 24px;
-      }
-      
-      /* Modal Styles */
-      .modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-      }
-      
-      .modal.active {
-        display: flex;
-      }
-      
-      .modal-content {
-        background: white;
-        border-radius: 16px;
-        padding: 24px;
-        position: relative;
-        max-height: 90vh;
-        overflow-y: auto;
-        width: 100%;
-        max-width: 600px;
-      }
-      
-      .modal-close {
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        background: none;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-        color: #6b7280;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 6px;
-      }
-      
-      .modal-close:hover {
-        background: #f3f4f6;
-      }
-      
-      .modal-header {
-        margin-bottom: 24px;
-      }
-      
-      .modal-title {
-        font-size: 24px;
-        font-weight: 600;
-        color: #18181b;
-        margin-bottom: 8px;
-      }
-      
-      .modal-subtitle {
-        color: #6b7280;
-        font-size: 14px;
-      }
-      
-      /* Form Styles */
-      .form-group {
-        margin-bottom: 16px;
-      }
-      
-      .form-label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 500;
-        color: #374151;
-        font-size: 14px;
-      }
-      
-      .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-      }
-      
-      textarea.form-input {
-        resize: vertical;
-        min-height: 100px;
-        font-family: 'Inter', sans-serif;
-      }
-      
-      /* AI Buttons */
-      .ai-buttons {
-        display: flex;
-        gap: 8px;
-        margin-top: 8px;
-      }
-      
-      .ai-button {
-        font-size: 12px !important;
-        padding: 4px 8px !important;
-      }
-      
-      .form-actions {
-        display: flex;
-        gap: 12px;
-        margin-top: 24px;
-      }
-      
-      /* Mockup Modal */
-      .mockup-editor {
-        background: #fafafa;
-        border-radius: 12px;
-        padding: 24px;
-        margin-bottom: 20px;
-      }
-      
-      .mockup-preview {
-        height: 300px;
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 20px;
-        overflow: auto;
-      }
-      
-      .mockup-controls {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
-      }
-      
-      .control-group {
-        margin-bottom: 16px;
-      }
-      
-      .control-label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 500;
-        color: #374151;
-        font-size: 14px;
-      }
-      
-      .control-input {
-        width: 100%;
-        padding: 10px 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        font-size: 14px;
-        background: white;
-      }
-      
-      /* Product Status Badges */
-      .status-draft { background: #fffbeb; color: #d97706; }
-      .status-listed { background: #f0fdf4; color: #059669; }
-      .status-published { background: #f0fdf4; color: #059669; }
-      .status-archived { background: #f3f4f6; color: #6b7280; }
-      
-      /* Utility Classes */
-      .hidden {
-        display: none !important;
-      }
-      
-      .bg-blue-100 { background-color: #dbeafe; }
-      .text-blue-800 { color: #1e40af; }
-      
-      /* Loading Animation */
-      .loading-spinner {
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        border: 2px solid rgba(255,255,255,.3);
-        border-radius: 50%;
-        border-top-color: #fff;
-        animation: spin 1s ease-in-out infinite;
-      }
-      
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-      
-      /* Notification */
-      .notification {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 12px 24px;
-        border-radius: 8px;
-        color: white;
-        font-weight: 500;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      }
-      
-      .notification.success { background: #10b981; }
-      .notification.error { background: #ef4444; }
-      .notification.warning { background: #f59e0b; }
-      .notification.info { background: #3b82f6; }
-      
-      @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-      }
-      
-      @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-      }
-      
-      /* Responsive */
-      @media (max-width: 768px) {
-        .dashboard-layout {
-          flex-direction: column;
-        }
-        
-        .dashboard-sidebar {
-          width: 100%;
-          border-right: none;
-          border-bottom: 1px solid #e5e7eb;
-        }
-        
-        .sidebar-nav {
-          flex-direction: row;
-          overflow-x: auto;
-          padding: 16px;
-        }
-        
-        .sidebar-nav-item {
-          white-space: nowrap;
-        }
-        
-        .dashboard-main {
-          padding: 24px;
-        }
-        
-        .products-header {
-          flex-direction: column;
-          align-items: stretch;
-        }
-        
-        .header-actions {
-          justify-content: stretch;
-        }
-        
-        .products-grid {
-          grid-template-columns: 1fr;
-        }
-        
-        .form-row {
-          grid-template-columns: 1fr;
-        }
-        
-        .products-filters {
-          flex-direction: column;
-          align-items: stretch;
-        }
-        
-        .filter-group {
-          justify-content: space-between;
-        }
-        
-        .product-actions {
-          flex-direction: column;
-        }
-      }
-      
-      @media (max-width: 480px) {
-        .products-title h1 {
-          font-size: 24px;
-        }
-        
-        .header-actions {
-          flex-direction: column;
-        }
-        
-        .modal-content {
-          padding: 20px;
-        }
-      }
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+<style>
+  /* Products Page Styles */
 
-      .etsy-status-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 12px;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 600;
-        background: #10b981;
-        color: white;
-      }
-      
-      .btn-success {
-        background: #fbbf24;
-        color: black;
-        border: none;
-      }
-      
-      .btn-success:hover {
-        background: #f59e0b;
-        transform: translateY(-1px);
-      }
-      
-      .product-source-badge {
-        display: inline-block;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 10px;
-        font-weight: 600;
-        margin-left: 8px;
-        vertical-align: middle;
-      }
-      
-      .source-etsy {
-        background: #fbbf24;
-        color: black;
-      }
-      
-      .source-local {
-        background: #3b82f6;
-        color: white;
-      }
-      
-      .source-ai {
-        background: #8b5cf6;
-        color: white;
-      }
-      
-      .etsy-product-card {
-        border: 2px solid #fbbf24 !important;
-      }
-      
-      .etsy-import-item {
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-      
-      .etsy-import-item:hover {
-        background: #f9fafb;
-      }
-    </style>
+/* Products Header */
+.products-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.products-title {
+  flex: 1;
+  min-width: 300px;
+}
+
+.products-title h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #18181b;
+  margin-bottom: 8px;
+}
+
+.products-title p {
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Products Grid */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+/* Product Card */
+.product-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(234, 88, 12, 0.15);
+  border-color: #fdba74;
+}
+
+.product-image {
+  height: 200px;
+  background: linear-gradient(135deg, #fef3f2, #fef7f0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.product-image-placeholder {
+  text-align: center;
+  color: #ea580c;
+}
+
+.product-image-placeholder svg {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 12px;
+}
+
+.product-image-placeholder p {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.product-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: linear-gradient(135deg, #ea580c, #dc2626);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.product-content {
+  padding: 20px;
+}
+
+.product-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.product-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #18181b;
+  line-height: 1.4;
+  flex: 1;
+  margin: 0;
+}
+
+.product-price {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ea580c;
+  white-space: nowrap;
+}
+
+.product-category {
+  display: inline-block;
+  background: #fef7f0;
+  color: #ea580c;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.product-description {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.product-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.product-actions .btn {
+  flex: 1;
+  min-width: 100px;
+  justify-content: center;
+}
+
+/* Empty State */
+.products-empty {
+  text-align: center;
+  padding: 80px 24px;
+  background: white;
+  border: 2px dashed #e5e7eb;
+  border-radius: 16px;
+}
+
+.empty-icon {
+  width: 64px;
+  height: 64px;
+  background: #fef7f0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.empty-icon svg {
+  width: 32px;
+  height: 32px;
+  color: #ea580c;
+}
+
+.empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #18181b;
+  margin-bottom: 8px;
+}
+
+.empty-description {
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+/* Filters */
+.products-filters {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.filter-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  white-space: nowrap;
+}
+
+/* Modal Styles for Products */
+.modal-header {
+  margin-bottom: 24px;
+}
+
+.modal-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #18181b;
+  margin-bottom: 8px;
+}
+
+.modal-subtitle {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Form Styles */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn-flex {
+  flex: 1;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid #d1d5db;
+  color: #374151;
+}
+
+.btn-outline:hover {
+  border-color: #ea580c;
+  color: #ea580c;
+  background: #fef7f0;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* AI Butonları */
+.ai-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ai-button {
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+}
+
+/* Mockup Modal */
+.mockup-editor {
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.mockup-preview {
+  height: 300px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.mockup-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.control-group {
+  margin-bottom: 16px;
+}
+
+.control-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #374151;
+  font-size: 14px;
+}
+
+.control-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+}
+
+.control-input:focus {
+  outline: none;
+  border-color: #ea580c;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
+}
+
+/* Product Status */
+.product-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-draft { background: #fffbeb; color: #d97706; }
+.status-published { background: #f0fdf4; color: #059669; }
+.status-archived { background: #f3f4f6; color: #6b7280; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .products-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .header-actions {
+    justify-content: stretch;
+  }
+  
+  .header-actions .btn {
+    flex: 1;
+    min-width: auto;
+  }
+  
+  .products-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .products-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-group {
+    justify-content: space-between;
+  }
+  
+  .product-actions {
+    flex-direction: column;
+  }
+  
+  .product-actions .btn {
+    min-width: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .products-title h1 {
+    font-size: 24px;
+  }
+  
+  .header-actions {
+    flex-direction: column;
+  }
+}
+
+  /* Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal.active {
+  display: flex;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 600px;
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.modal-close:hover {
+  background: #f3f4f6;
+}
+
+/* Form Styles */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #374151;
+  font-size: 14px;
+}
+
+.form-input, .select-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus, .select-input:focus {
+  outline: none;
+  border-color: #ea580c;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
+}
+
+/* Button Styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: #ea580c;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #c2410c;
+  transform: translateY(-1px);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid #d1d5db;
+  color: #374151;
+}
+
+.btn-outline:hover {
+  border-color: #ea580c;
+  color: #ea580c;
+  background: #fef7f0;
+  transform: translateY(-1px);
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* Utility Classes */
+.hidden {
+  display: none !important;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.mb-4 {
+  margin-bottom: 16px;
+}
+
+/* Analysis Results Modal */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.7);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal.active {
+  display: flex;
+}
+
+/* File Upload Styles */
+#design-dropzone.dragover {
+  border-color: #ea580c !important;
+  background: #fef7f0 !important;
+}
+
+#design-preview img {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+}
+
+/* Loading Animation */
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+  </style>
   </head>
   
   <body class="dashboard-container">
@@ -887,7 +641,7 @@
             </svg>
             Orders
           </a>
-          <a href="/payments.html" class="sidebar-nav-item">
+           <a href="/payments.html" class="sidebar-nav-item">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
             </svg>
@@ -910,10 +664,10 @@
 
         <div class="sidebar-user">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <div class="user-avatar" id="user-avatar">JD</div>
+            <div class="user-avatar">JD</div>
             <div>
-              <div style="font-weight: 600; color: #18181b;" id="user-name">John Doe</div>
-              <div style="font-size: 12px; color: #6b7280;" id="user-email">admin@example.com</div>
+              <div style="font-weight: 600; color: #18181b;">John Doe</div>
+              <div style="font-size: 12px; color: #6b7280;">admin@example.com</div>
             </div>
           </div>
         </div>
@@ -927,10 +681,7 @@
             <h1>Products</h1>
             <p>Manage your product catalog and generate mockups</p>
           </div>
-          <div class="header-actions" id="header-actions">
-            <div class="etsy-status" id="etsy-status" style="display: none;">
-              <span class="etsy-status-badge" id="etsy-status-text">Etsy Connected</span>
-            </div>
+          <div class="header-actions">
             <button class="btn btn-outline" id="btn-analyze-top-sellers">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
@@ -943,55 +694,24 @@
               </svg>
               New Product
             </button>
-            <button class="btn btn-success" id="btn-import-etsy" style="background: #fbbf24; color: black; border: none;">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-              </svg>
-              Import from Etsy
-            </button>
           </div>
         </header>
 
-        <!-- Etsy Connection Status -->
-        <div id="etsy-connection-panel" class="hidden" style="margin-bottom: 24px; padding: 16px; background: #f0fdf4; border-radius: 12px; border: 1px solid #86efac;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <h3 style="font-size: 16px; font-weight: 600; color: #065f46; margin-bottom: 4px;">
-                <svg style="display: inline-block; margin-right: 8px; vertical-align: middle;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                </svg>
-                Etsy Connected
-              </h3>
-              <p style="font-size: 14px; color: #047857; margin: 0;">Your Etsy shop is connected. You can import products directly.</p>
-            </div>
-            <button class="btn btn-outline btn-sm" id="btn-disconnect-etsy" style="border-color: #10b981; color: #065f46;">
-              Disconnect
-            </button>
-          </div>
-        </div>
-
-        <!-- Search and Filters -->
-        <div style="display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;">
-          <div style="flex: 1; min-width: 300px;">
-            <input 
-              type="text" 
-              id="search-products" 
-              placeholder="Search products..."
-              class="form-input"
-              style="width: 100%;"
-            />
-          </div>
-          
-          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-            <select class="select-input" id="filter-status" style="min-width: 120px;">
+        <!-- Filters -->
+        <div class="products-filters">
+          <div class="filter-group">
+            <label class="filter-label">Status:</label>
+            <select class="select-input" id="filter-status">
               <option value="">All Status</option>
               <option value="draft">Draft</option>
               <option value="published">Published</option>
               <option value="archived">Archived</option>
-              <option value="etsy">On Etsy</option>
             </select>
-            
-            <select class="select-input" id="filter-category" style="min-width: 140px;">
+          </div>
+          
+          <div class="filter-group">
+            <label class="filter-label">Category:</label>
+            <select class="select-input" id="filter-category">
               <option value="">All Categories</option>
               <option value="tshirt">T-Shirt</option>
               <option value="mug">Mug</option>
@@ -1000,60 +720,13 @@
               <option value="jewelry">Jewelry</option>
               <option value="wood">Wood Product</option>
             </select>
-            
-            <select class="select-input" id="filter-source" style="min-width: 140px;">
-              <option value="">All Sources</option>
-              <option value="local">Local</option>
-              <option value="etsy">Etsy</option>
-              <option value="ai">AI Generated</option>
-            </select>
           </div>
         </div>
 
-      <!-- Trend Analiz Formu -->
-<div class="card">
-    <div class="card-header">
-        <h3>🔍 Etsy Trend Analizi & Benzer Ürün Oluşturma</h3>
-    </div>
-    <div class="card-body">
-        <div class="form-row">
-            <div class="form-group">
-                <label>Anahtar Kelimeler</label>
-                <input type="text" id="trend-keywords" class="form-control" 
-                       placeholder="örn: minimalist art, handmade jewelry">
-            </div>
-            <div class="form-group">
-                <label>Kategori</label>
-                <select id="trend-category" class="form-control">
-                    <option value="">Tüm Kategoriler</option>
-                    <option value="art_and_collectibles">Sanat & Koleksiyon</option>
-                    <option value="home_and_living">Ev & Yaşam</option>
-                    <option value="jewelry">Takı</option>
-                    <option value="clothing">Giyim</option>
-                    <option value="accessories">Aksesuar</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>&nbsp;</label>
-                <button id="analyze-trends-btn" class="btn btn-primary btn-block">
-                    <i class="fas fa-chart-line"></i> Trendleri Analiz Et
-                </button>
-            </div>
+        <!-- Products Grid -->
+        <div class="products-grid" id="products-grid">
+          <!-- Products will be loaded here via products.js -->
         </div>
-        <p class="text-muted small">
-            Etsy'de popüler ürünleri analiz eder ve size benzer ürünler oluşturur.
-            AI ile orijinalden farklı ama aynı trendde ürünler üretir.
-        </p>
-    </div>
-</div>
-
-<!-- Ürünler -->
-<div class="products-section">
-    <h3>🛍️ Ürünlerim</h3>
-    <div id="products-grid" class="products-grid">
-        <!-- Ürün kartları buraya gelecek -->
-    </div>
-</div>
 
         <!-- Empty State -->
         <div class="products-empty hidden" id="products-empty">
@@ -1063,27 +736,10 @@
             </svg>
           </div>
           <h3 class="empty-title">No products yet</h3>
-          <p class="empty-description">Create your first product or import from Etsy to get started</p>
-          <div style="display: flex; gap: 12px; justify-content: center;">
-            <button class="btn btn-primary" id="btn-empty-new-product">
-              Create First Product
-            </button>
-            <button class="btn btn-outline" id="btn-empty-import-etsy">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
-              </svg>
-              Import from Etsy
-            </button>
-          </div>
-        </div>
-
-        <!-- Loading State -->
-        <div class="products-empty hidden" id="products-loading">
-          <div class="empty-icon">
-            <div class="loading-spinner" style="width: 40px; height: 40px;"></div>
-          </div>
-          <h3 class="empty-title">Loading Products</h3>
-          <p class="empty-description">Please wait while we load your products...</p>
+          <p class="empty-description">Create your first product to get started with your Etsy POD business</p>
+          <button class="btn btn-primary" id="btn-empty-new-product">
+            Create First Product
+          </button>
         </div>
       </main>
     </div>
@@ -1099,17 +755,26 @@
         
         <form id="form-product">
           <input type="hidden" id="product-id" />
-          <input type="hidden" id="product-source" value="local" />
           
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label" for="product-title">Product Title *</label>
-              <input type="text" id="product-title" required placeholder="Enter product title" class="form-input" />
+              <label class="form-label" for="product-title">Product Title</label>
+              <input
+                type="text"
+                id="product-title"
+                required
+                placeholder="Enter product title"
+                class="form-input"
+              />
             </div>
             
             <div class="form-group">
-              <label class="form-label" for="product-category">Category *</label>
-              <select id="product-category" required class="select-input">
+              <label class="form-label" for="product-category">Category</label>
+              <select
+                id="product-category"
+                required
+                class="form-input"
+              >
                 <option value="">Select category</option>
                 <option value="tshirt">T-Shirt</option>
                 <option value="mug">Mug</option>
@@ -1117,23 +782,30 @@
                 <option value="phone-case">Phone Case</option>
                 <option value="jewelry">Jewelry</option>
                 <option value="wood">Wood Product</option>
-                <option value="art">Art & Collectibles</option>
-                <option value="home">Home & Living</option>
-                <option value="stationery">Stationery</option>
-                <option value="accessories">Accessories</option>
               </select>
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label" for="product-price">Price (USD) *</label>
-              <input type="number" id="product-price" step="0.01" min="0" required placeholder="0.00" class="form-input" />
+              <label class="form-label" for="product-price">Price (USD)</label>
+              <input
+                type="number"
+                id="product-price"
+                step="0.01"
+                min="0"
+                required
+                placeholder="0.00"
+                class="form-input"
+              />
             </div>
             
             <div class="form-group">
               <label class="form-label" for="product-status">Status</label>
-              <select id="product-status" class="select-input">
+              <select
+                id="product-status"
+                class="form-input"
+              >
                 <option value="draft">Draft</option>
                 <option value="published">Published</option>
                 <option value="archived">Archived</option>
@@ -1143,35 +815,21 @@
 
           <div class="form-group">
             <label class="form-label" for="product-description">Description</label>
-            <textarea id="product-description" rows="4" placeholder="Enter product description..." class="form-input"></textarea>
+            <textarea
+              id="product-description"
+              rows="4"
+              placeholder="Enter product description..."
+              class="form-input"
+              style="resize: vertical;"
+            ></textarea>
             <div class="ai-buttons">
               <button type="button" class="btn btn-outline btn-sm ai-button" id="btn-generate-description">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="12" height="12">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                 </svg>
-                AI Generate Description
+                AI Generate
               </button>
             </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="product-tags">Tags (comma separated)</label>
-            <input type="text" id="product-tags" placeholder="handmade, custom, gift, personalized" class="form-input" />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Product Images</label>
-            <div id="image-upload-container" style="border: 2px dashed #d1d5db; border-radius: 8px; padding: 20px; text-align: center;">
-              <svg style="width: 48px; height: 48px; color: #9ca3af; margin-bottom: 12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
-              <p style="color: #6b7280; margin-bottom: 12px;">Drag & drop images or click to upload</p>
-              <button type="button" class="btn btn-outline btn-sm" id="btn-upload-images">
-                Upload Images
-              </button>
-              <input type="file" id="file-upload" multiple accept="image/*" style="display: none;" />
-            </div>
-            <div id="image-preview" style="margin-top: 12px;"></div>
           </div>
 
           <div class="form-actions">
@@ -1179,61 +837,6 @@
             <button type="button" class="btn btn-outline btn-flex" id="btn-cancel-product">Cancel</button>
           </div>
         </form>
-      </div>
-    </div>
-
-    <!-- Etsy Import Modal -->
-    <div class="modal" id="modal-etsy-import">
-      <div class="modal-content" style="max-width: 800px;">
-        <button class="modal-close" id="modal-etsy-import-close">&times;</button>
-        <div class="modal-header">
-          <h2 class="modal-title">Import from Etsy</h2>
-          <p class="modal-subtitle">Import your products from Etsy to manage them here</p>
-        </div>
-        
-        <div id="etsy-import-content">
-          <!-- Content will be loaded dynamically -->
-        </div>
-      </div>
-    </div>
-
-    <!-- Etsy Connect Modal -->
-    <div class="modal" id="modal-etsy-connect">
-      <div class="modal-content" style="max-width: 500px;">
-        <button class="modal-close" id="modal-etsy-connect-close">&times;</button>
-        <div class="modal-header">
-          <h2 class="modal-title">Connect Etsy Shop</h2>
-          <p class="modal-subtitle">Connect your Etsy shop to import products</p>
-        </div>
-        
-        <div style="padding: 20px;">
-          <div class="form-group">
-            <label class="form-label">Etsy Shop Name</label>
-            <input type="text" id="etsy-shop-name" placeholder="YourShopName" class="form-input" />
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">Etsy API Key</label>
-            <input type="password" id="etsy-api-key" placeholder="Your Etsy API Key" class="form-input" />
-            <p style="font-size: 12px; color: #6b7280; margin-top: 4px;">
-              Get your API key from <a href="https://www.etsy.com/developers/your-apps" target="_blank" style="color: #ea580c;">Etsy Developer Portal</a>
-            </p>
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">Shared Secret</label>
-            <input type="password" id="etsy-shared-secret" placeholder="Your Shared Secret" class="form-input" />
-          </div>
-          
-          <div class="form-actions">
-            <button class="btn btn-primary btn-flex" id="btn-connect-etsy">
-              Connect Etsy Shop
-            </button>
-            <button class="btn btn-outline btn-flex" onclick="closeModal('modal-etsy-connect')">
-              Cancel
-            </button>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -1247,271 +850,11 @@
         </div>
         
         <div id="mockup-editor-container">
-          <!-- Mockup editor will be loaded here -->
+          <!-- Mockup editor will be loaded here via products.js -->
         </div>
       </div>
     </div>
 
-    <!-- Top Sellers Modal (Dynamic) -->
-    <div id="top-seller-modal-container"></div>
-
-    <!-- Etsy Products Modal -->
-    <div id="etsy-products-modal-container"></div>
-    
-    <!-- Etsy Service -->
-    <script>
-      // Real Etsy API Service
-      class EtsyAPIService {
-        constructor(apiKey, shopId = null) {
-          this.apiKey = apiKey;
-          this.shopId = shopId;
-          this.baseUrl = 'https://openapi.etsy.com/v3/application';
-        }
-
-        async getHeaders() {
-          return {
-            'x-api-key': this.apiKey,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          };
-        }
-
-        // Get shop listings from Etsy
-        async getShopListings(limit = 100, offset = 0, state = 'active') {
-          try {
-            if (!this.shopId) {
-              throw new Error('Shop ID is required');
-            }
-
-            const response = await fetch(
-              `${this.baseUrl}/shops/${this.shopId}/listings/${state}?limit=${limit}&offset=${offset}`,
-              {
-                headers: await this.getHeaders()
-              }
-            );
-
-            if (!response.ok) {
-              const errorText = await response.text();
-              console.error('Etsy API Error Response:', errorText);
-              throw new Error(`Etsy API Error: ${response.status} - ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            return data;
-          } catch (error) {
-            console.error('Error fetching Etsy listings:', error);
-            throw error;
-          }
-        }
-
-        // Get listing details
-        async getListingDetails(listingId) {
-          try {
-            const response = await fetch(
-              `${this.baseUrl}/listings/${listingId}`,
-              {
-                headers: await this.getHeaders()
-              }
-            );
-
-            if (!response.ok) {
-              throw new Error(`Etsy API Error: ${response.status}`);
-            }
-
-            return await response.json();
-          } catch (error) {
-            console.error('Error fetching listing details:', error);
-            throw error;
-          }
-        }
-
-        // Get listing images
-        async getListingImages(listingId) {
-          try {
-            const response = await fetch(
-              `${this.baseUrl}/listings/${listingId}/images`,
-              {
-                headers: await this.getHeaders()
-              }
-            );
-
-            if (!response.ok) {
-              throw new Error(`Etsy API Error: ${response.status}`);
-            }
-
-            const data = await response.json();
-            return data.results || [];
-          } catch (error) {
-            console.error('Error fetching listing images:', error);
-            return [];
-          }
-        }
-
-        // Search listings on Etsy (for trend analysis)
-        async searchListings(keywords, category = null, minPrice = null, maxPrice = null) {
-          try {
-            let url = `${this.baseUrl}/listings/active?keywords=${encodeURIComponent(keywords)}&limit=50`;
-            
-            if (category) {
-              url += `&category=${encodeURIComponent(category)}`;
-            }
-            if (minPrice) {
-              url += `&min_price=${minPrice}`;
-            }
-            if (maxPrice) {
-              url += `&max_price=${maxPrice}`;
-            }
-
-            const response = await fetch(url, {
-              headers: await this.getHeaders()
-            });
-
-            if (!response.ok) {
-              throw new Error(`Etsy API Error: ${response.status}`);
-            }
-
-            const data = await response.json();
-            return data;
-          } catch (error) {
-            console.error('Error searching Etsy listings:', error);
-            throw error;
-          }
-        }
-
-        // Get trending listings (simulated - Etsy doesn't have direct trending endpoint)
-        async getTrendingListings(category = null) {
-          try {
-            // For demo, we'll use search with popular keywords
-            const keywords = category ? 
-              ['popular', 'trending', 'bestseller', category].join(' ') :
-              'popular trending bestseller handmade';
-            
-            const data = await this.searchListings(keywords, category);
-            
-            // Add trend scores based on views and favorites
-            if (data.results) {
-              data.results = data.results.map(listing => ({
-                ...listing,
-                trend_score: this.calculateTrendScore(listing),
-                monthly_sales_estimate: this.estimateMonthlySales(listing)
-              }));
-            }
-            
-            return data;
-          } catch (error) {
-            console.error('Error getting trending listings:', error);
-            // Fallback to mock data
-            return this.getMockTrendingData(category);
-          }
-        }
-
-        calculateTrendScore(listing) {
-          let score = 50;
-          const views = listing.views || 0;
-          const favorites = listing.num_favorers || 0;
-          
-          if (views > 1000) score += 20;
-          if (views > 5000) score += 20;
-          if (favorites > 100) score += 15;
-          if (favorites > 500) score += 15;
-          
-          return Math.min(score, 100);
-        }
-
-        estimateMonthlySales(listing) {
-          const favorites = listing.num_favorers || 0;
-          const views = listing.views || 0;
-          const listingAge = (Date.now() - listing.created) / (1000 * 60 * 60 * 24);
-          
-          let estimate = favorites * 0.1;
-          estimate += views * 0.005;
-          
-          if (listingAge < 30) {
-            estimate *= 1.5; // New listings get boost
-          }
-          
-          return Math.floor(Math.max(estimate, 10));
-        }
-
-        // Mock data for development/demo
-        getMockTrendingData(category = null) {
-          const categories = category ? [category] : 
-            ['tshirt', 'mug', 'jewelry', 'art', 'home', 'accessories'];
-          
-          const mockListings = [];
-          for (let i = 0; i < 8; i++) {
-            const cat = categories[Math.floor(Math.random() * categories.length)];
-            mockListings.push({
-              listing_id: 1000 + i,
-              title: `Trending ${cat} Product ${i + 1}`,
-              price: { amount: 15 + Math.random() * 35, currency_code: 'USD' },
-              description: `Popular ${cat} product trending on Etsy`,
-              views: Math.floor(Math.random() * 5000) + 1000,
-              num_favorers: Math.floor(Math.random() * 500) + 50,
-              created: Date.now() - Math.floor(Math.random() * 90) * 86400000,
-              category: cat,
-              trend_score: 70 + Math.random() * 30,
-              monthly_sales_estimate: Math.floor(Math.random() * 200) + 50
-            });
-          }
-          
-          return {
-            count: mockListings.length,
-            results: mockListings
-          };
-        }
-
-        // Test connection to Etsy API
-        async testConnection() {
-          try {
-            const response = await fetch(`${this.baseUrl}/application/openapi`, {
-              headers: await this.getHeaders()
-            });
-            
-            if (response.ok) {
-              return { success: true, message: 'Etsy API connection successful' };
-            } else {
-              return { success: false, message: `API Error: ${response.status}` };
-            }
-          } catch (error) {
-            return { success: false, message: error.message };
-          }
-        }
-
-        // Get shop info
-        async getShopInfo(shopId = null) {
-          try {
-            const targetShopId = shopId || this.shopId;
-            if (!targetShopId) {
-              throw new Error('Shop ID is required');
-            }
-
-            const response = await fetch(
-              `${this.baseUrl}/shops/${targetShopId}`,
-              {
-                headers: await this.getHeaders()
-              }
-            );
-
-            if (!response.ok) {
-              throw new Error(`Etsy API Error: ${response.status}`);
-            }
-
-            return await response.json();
-          } catch (error) {
-            console.error('Error fetching shop info:', error);
-            throw error;
-          }
-        }
-      }
-
-      // Make service available globally
-      window.EtsyAPIService = EtsyAPIService;
-      
-      console.log('Etsy API Service loaded');
-    </script>
-
-    
     <!-- JavaScript Import -->
     <script src="/assets/js/env.js"></script>
     <script type="module" src="/assets/js/supabaseClient.js"></script>
@@ -1519,13 +862,10 @@
     <script type="module" src="/assets/js/api.js"></script>
     <script type="module" src="/assets/js/ui.js"></script>
     <script type="module" src="/assets/js/products.js"></script>
-    <script type="module" src="/assets/js/ai-top-seller-enhanced.js"></script>
+	<script type="module" src="/assets/js/ai-top-seller-enhanced.js"></script>
     <script type="module" src="/assets/js/ai-mockup.js"></script>
     <script type="module" src="/assets/js/ai-seo.js"></script>  
 
 	  
-  </body>
-</html>
-    
   </body>
 </html>
