@@ -10,17 +10,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-      // Supabase bağlantısı - KENDİ DEĞERLERİNİZİ GİRİN
-      const SUPABASE_URL = 'https://your-project-id.supabase.co';
-      const SUPABASE_ANON_KEY = 'your-anon-key-here';
-      
-      // Global supabase objesini oluştur
-      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      window.supabaseClient = supabase; // Global erişim için
-    </script>
+    <!-- Environment Configuration -->
+    <script src="/assets/js/env.js"></script>
+    
+    <!-- Supabase Client -->
+    <script type="module" src="/assets/js/supabaseClient.js"></script>
     
     <!-- Custom CSS -->
     <style>
@@ -854,10 +848,10 @@
 
         <div class="sidebar-user">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <div class="user-avatar">JD</div>
+            <div class="user-avatar" id="user-avatar">JD</div>
             <div>
-              <div style="font-weight: 600; color: #18181b;">John Doe</div>
-              <div style="font-size: 12px; color: #6b7280;">admin@example.com</div>
+              <div style="font-weight: 600; color: #18181b;" id="user-name">John Doe</div>
+              <div style="font-size: 12px; color: #6b7280;" id="user-email">admin@example.com</div>
             </div>
           </div>
         </div>
@@ -871,7 +865,7 @@
             <h1>Products</h1>
             <p>Manage your product catalog and generate mockups</p>
           </div>
-          <div class="header-actions">
+          <div class="header-actions" id="header-actions">
             <button class="btn btn-outline" id="btn-analyze-top-sellers">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
@@ -1059,167 +1053,6 @@
     <div id="top-seller-modal-container"></div>
 
     <!-- JavaScript -->
-    <script>
-      // Etsy Service - products.js içine gömülü versiyon
-      class EtsyService {
-        constructor(apiKey, shopId) {
-          this.apiKey = apiKey;
-          this.shopId = shopId;
-          this.baseUrl = 'https://openapi.etsy.com/v3/application';
-        }
-
-        async getHeaders() {
-          return {
-            'x-api-key': this.apiKey,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          };
-        }
-
-        // Mock API çağrısı (gerçek API yerine)
-        async getShopListings(limit = 50, offset = 0) {
-          console.log('Mock Etsy API: getShopListings');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          return {
-            count: 10,
-            results: Array.from({ length: Math.min(limit, 10) }, (_, i) => ({
-              listing_id: 1000 + i + offset,
-              title: `Etsy Product ${i + 1 + offset}`,
-              description: `Handmade custom product ${i + 1} - Premium quality`,
-              price: { amount: 19.99 + i * 5, currency_code: 'USD' },
-              state: 'active',
-              views: Math.floor(Math.random() * 1000),
-              num_favorers: Math.floor(Math.random() * 100),
-              created: Date.now() - (i * 86400000),
-              images: [{ 
-                url_fullxfull: this.getMockImageUrl(i) 
-              }]
-            }))
-          };
-        }
-
-        async getTrendingListings(category = null) {
-          console.log('Mock Etsy API: getTrendingListings');
-          await new Promise(resolve => setTimeout(resolve, 800));
-          
-          return {
-            count: 8,
-            results: Array.from({ length: 8 }, (_, i) => ({
-              listing_id: 2000 + i,
-              title: `${category ? category + ' ' : ''}Trending Product ${i + 1}`,
-              description: `Trending ${category || 'product'} with high demand`,
-              price: { amount: 24.99 + i * 3, currency_code: 'USD' },
-              state: 'active',
-              views: Math.floor(Math.random() * 5000),
-              num_favorers: Math.floor(Math.random() * 500),
-              favorite_count: Math.floor(Math.random() * 300),
-              created: Date.now() - (i * 172800000),
-              images: [{ 
-                url_fullxfull: this.getMockImageUrl(i) 
-              }]
-            }))
-          };
-        }
-
-        async createListing(listingData) {
-          console.log('Mock Etsy API: createListing', listingData);
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          
-          return {
-            listing_id: Math.floor(Math.random() * 1000000),
-            title: listingData.title,
-            state: 'draft',
-            created: Date.now()
-          };
-        }
-
-        getMockImageUrl(index) {
-          const images = [
-            'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&h=600&fit=crop',
-            'https://images.unsplash.com/photo-1514228742587-6b1558fcf93a?w=600&h=600&fit=crop',
-            'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=600&h=600&fit=crop',
-            'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600&h=600&fit=crop',
-            'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&h=600&fit=crop',
-            'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&h=600&fit=crop',
-            'https://images.unsplash.com/photo-1563241527-3004b7be0ffd?w=600&h=600&fit=crop',
-            'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600&h=600&fit=crop'
-          ];
-          return images[index % images.length];
-        }
-      }
-
-      class MockEtsyService {
-        async getShopListings() {
-          console.log('Mock Service: getShopListings');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          return {
-            count: 6,
-            results: Array.from({ length: 6 }, (_, i) => ({
-              listing_id: 3000 + i,
-              title: `Mock Product ${i + 1}`,
-              description: `Mock product description ${i + 1}`,
-              price: { amount: 15.99 + i * 2, currency_code: 'USD' },
-              state: 'active',
-              views: Math.floor(Math.random() * 800),
-              num_favorers: Math.floor(Math.random() * 80),
-              created: Date.now() - (i * 86400000)
-            }))
-          };
-        }
-
-        async getTrendingListings(category = null) {
-          console.log('Mock Service: getTrendingListings');
-          await new Promise(resolve => setTimeout(resolve, 800));
-          
-          const categories = ['tshirt', 'mug', 'plate', 'phone-case', 'jewelry', 'wood'];
-          const selectedCategory = category || categories[Math.floor(Math.random() * categories.length)];
-          
-          return {
-            count: 6,
-            results: Array.from({ length: 6 }, (_, i) => ({
-              listing_id: 4000 + i,
-              title: `Trending ${selectedCategory} ${i + 1}`,
-              description: `Popular ${selectedCategory} product trending on Etsy`,
-              price: { amount: 22.99 + i * 4, currency_code: 'USD' },
-              state: 'active',
-              views: Math.floor(Math.random() * 3000),
-              num_favorers: Math.floor(Math.random() * 400),
-              favorite_count: Math.floor(Math.random() * 250),
-              created: Date.now() - (i * 259200000),
-              category: selectedCategory
-            }))
-          };
-        }
-      }
-
-      // Factory pattern
-      class EtsyServiceFactory {
-        static async createService(userId) {
-          try {
-            // Gerçek Etsy mağaza bilgilerini kontrol et
-            const { data: etsyShop } = await supabase
-              .from('etsy_shops')
-              .select('*')
-              .eq('user_id', userId)
-              .eq('is_active', true)
-              .single();
-            
-            if (etsyShop && etsyShop.api_key) {
-              console.log('Gerçek Etsy servisi oluşturuluyor');
-              return new EtsyService(etsyShop.api_key, etsyShop.id);
-            }
-          } catch (error) {
-            console.log('Gerçek Etsy servisi oluşturulamadı:', error.message);
-          }
-          
-          console.log('Mock Etsy servisi kullanılıyor');
-          return new MockEtsyService();
-        }
-      }
-    </script>
-
     <script src="/assets/js/products.js"></script>
   </body>
 </html>
