@@ -1,1058 +1,583 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Products – Etsy AI POD</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+// products.js - BASİT VE ÇALIŞAN VERSİYON
+
+let currentUser = null;
+let currentProducts = [];
+
+// Sayfa yüklendiğinde
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Products page loaded');
     
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    // Demo modda başlat
+    initializeDemoMode();
     
-    <!-- Environment Configuration -->
-    <script src="/assets/js/env.js"></script>
+    // Event listener'ları kur
+    setupEventListeners();
     
-    <!-- Supabase Client -->
-    <script type="module" src="/assets/js/supabaseClient.js"></script>
+    // Demo ürünleri göster
+    loadDemoProducts();
+});
+
+function initializeDemoMode() {
+    // Demo kullanıcı oluştur
+    currentUser = {
+        id: 'demo-user-' + Date.now(),
+        email: 'demo@example.com'
+    };
     
-    <!-- Custom CSS -->
-    <style>
-      /* Reset & Base Styles */
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      
-      body {
-        font-family: 'Inter', sans-serif;
-        background: #f9fafb;
-        color: #374151;
-        line-height: 1.5;
-        overflow-x: hidden;
-      }
-      
-      /* Dashboard Layout */
-      .dashboard-container {
-        min-height: 100vh;
-      }
-      
-      .dashboard-layout {
-        display: flex;
-        min-height: 100vh;
-      }
-      
-      /* Sidebar */
-      .dashboard-sidebar {
-        width: 260px;
-        background: white;
-        border-right: 1px solid #e5e7eb;
-        display: flex;
-        flex-direction: column;
-        flex-shrink: 0;
-      }
-      
-      .sidebar-header {
-        padding: 24px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        border-bottom: 1px solid #e5e7eb;
-      }
-      
-      .sidebar-logo {
-        width: 40px;
-        height: 40px;
-        background: linear-gradient(135deg, #ea580c, #dc2626);
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-      }
-      
-      .sidebar-logo svg {
-        width: 24px;
-        height: 24px;
-      }
-      
-      .sidebar-title {
-        font-size: 18px;
-        font-weight: 700;
-        color: #18181b;
-      }
-      
-      .sidebar-subtitle {
-        font-size: 11px;
-        color: #ea580c;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-        margin-top: 2px;
-      }
-      
-      .sidebar-nav {
-        flex: 1;
-        padding: 24px 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-      
-      .sidebar-nav-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px 16px;
-        color: #6b7280;
-        text-decoration: none;
-        border-radius: 8px;
-        font-weight: 500;
-        transition: all 0.2s ease;
-      }
-      
-      .sidebar-nav-item:hover {
-        background: #f3f4f6;
-        color: #374151;
-      }
-      
-      .sidebar-nav-item.active {
-        background: #fef7f0;
-        color: #ea580c;
-        font-weight: 600;
-      }
-      
-      .sidebar-nav-item svg {
-        width: 20px;
-        height: 20px;
-        flex-shrink: 0;
-      }
-      
-      .sidebar-user {
-        padding: 20px 16px;
-        border-top: 1px solid #e5e7eb;
-        background: #f9fafb;
-      }
-      
-      .user-avatar {
-        width: 40px;
-        height: 40px;
-        background: linear-gradient(135deg, #ea580c, #dc2626);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: 600;
-        flex-shrink: 0;
-      }
-      
-      /* Main Content */
-      .dashboard-main {
-        flex: 1;
-        padding: 32px;
-        overflow-y: auto;
-      }
-      
-      /* Products Header */
-      .products-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 32px;
-        gap: 16px;
-        flex-wrap: wrap;
-      }
-      
-      .products-title {
-        flex: 1;
-        min-width: 300px;
-      }
-      
-      .products-title h1 {
-        font-size: 32px;
-        font-weight: 700;
-        color: #18181b;
-        margin-bottom: 8px;
-      }
-      
-      .products-title p {
-        color: #6b7280;
-        font-size: 16px;
-      }
-      
-      .header-actions {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-      
-      /* Status Badge */
-      .status-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 12px;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 600;
-        background: #10b981;
-        color: white;
-      }
-      
-      .status-badge.inactive {
-        background: #6b7280;
-      }
-      
-      .status-badge svg {
-        width: 14px;
-        height: 14px;
-      }
-      
-      /* Products Grid */
-      .products-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 24px;
-        margin-bottom: 32px;
-      }
-      
-      /* Product Card */
-      .product-card {
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 16px;
-        overflow: hidden;
-        transition: all 0.3s ease;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      }
-      
-      .product-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 32px rgba(234, 88, 12, 0.15);
-        border-color: #fdba74;
-      }
-      
-      .product-image {
-        height: 200px;
-        background: linear-gradient(135deg, #fef3f2, #fef7f0);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        overflow: hidden;
-      }
-      
-      .product-image img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-      
-      .product-image-placeholder {
-        text-align: center;
-        color: #ea580c;
-        padding: 20px;
-      }
-      
-      .product-image-placeholder svg {
-        width: 48px;
-        height: 48px;
-        margin-bottom: 12px;
-      }
-      
-      .product-image-placeholder p {
-        font-size: 14px;
-        font-weight: 500;
-      }
-      
-      .product-badge {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        background: linear-gradient(135deg, #ea580c, #dc2626);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 11px;
-        font-weight: 600;
-        z-index: 2;
-      }
-      
-      .etsy-badge {
-        position: absolute;
-        top: 12px;
-        left: 12px;
-        background: #fbbf24;
-        color: black;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 11px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        z-index: 2;
-      }
-      
-      .etsy-badge svg {
-        width: 12px;
-        height: 12px;
-      }
-      
-      .price-badge {
-        position: absolute;
-        bottom: 12px;
-        left: 12px;
-        background: rgba(0,0,0,0.7);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 600;
-      }
-      
-      .product-content {
-        padding: 20px;
-      }
-      
-      .product-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 12px;
-        gap: 12px;
-      }
-      
-      .product-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: #18181b;
-        line-height: 1.4;
-        flex: 1;
-        margin: 0;
-      }
-      
-      .product-price {
-        font-size: 18px;
-        font-weight: 700;
-        color: #ea580c;
-        white-space: nowrap;
-      }
-      
-      .product-category {
-        display: inline-block;
-        background: #f0f9ff;
-        color: #0ea5e9;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 500;
-        margin-bottom: 12px;
-      }
-      
-      .product-description {
-        color: #6b7280;
-        font-size: 14px;
-        line-height: 1.5;
-        margin-bottom: 16px;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-      
-      .product-rating {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 12px;
-      }
-      
-      .product-actions {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      
-      /* Button Styles */
-      .btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 16px;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
-        border: none;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        text-decoration: none;
-        justify-content: center;
-        white-space: nowrap;
-      }
-      
-      .btn-primary {
-        background: #ea580c;
-        color: white;
-      }
-      
-      .btn-primary:hover {
-        background: #c2410c;
-        transform: translateY(-1px);
-      }
-      
-      .btn-outline {
-        background: transparent;
-        border: 1px solid #d1d5db;
-        color: #374151;
-      }
-      
-      .btn-outline:hover {
-        border-color: #ea580c;
-        color: #ea580c;
-        background: #fef7f0;
-        transform: translateY(-1px);
-      }
-      
-      .btn-sm {
-        padding: 6px 12px;
-        font-size: 12px;
-      }
-      
-      .btn-flex {
-        flex: 1;
-      }
-      
-      /* Filters */
-      .products-filters {
-        display: flex;
-        gap: 16px;
-        margin-bottom: 24px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-      
-      .filter-group {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-      }
-      
-      .filter-label {
-        font-size: 14px;
-        font-weight: 500;
-        color: #374151;
-        white-space: nowrap;
-      }
-      
-      .select-input, .form-input {
-        padding: 8px 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        font-size: 14px;
-        background: white;
-        min-width: 150px;
-      }
-      
-      .select-input:focus, .form-input:focus {
-        outline: none;
-        border-color: #ea580c;
-        box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
-      }
-      
-      /* Empty State */
-      .products-empty {
-        text-align: center;
-        padding: 80px 24px;
-        background: white;
-        border: 2px dashed #e5e7eb;
-        border-radius: 16px;
-      }
-      
-      .empty-icon {
-        width: 64px;
-        height: 64px;
-        background: #fef7f0;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 20px;
-      }
-      
-      .empty-icon svg {
-        width: 32px;
-        height: 32px;
-        color: #ea580c;
-      }
-      
-      .empty-title {
-        font-size: 18px;
-        font-weight: 600;
-        color: #18181b;
-        margin-bottom: 8px;
-      }
-      
-      .empty-description {
-        color: #6b7280;
-        font-size: 14px;
-        margin-bottom: 24px;
-      }
-      
-      /* Modal Styles */
-      .modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-      }
-      
-      .modal.active {
-        display: flex;
-      }
-      
-      .modal-content {
-        background: white;
-        border-radius: 16px;
-        padding: 24px;
-        position: relative;
-        max-height: 90vh;
-        overflow-y: auto;
-        width: 100%;
-        max-width: 600px;
-      }
-      
-      .modal-close {
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        background: none;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-        color: #6b7280;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 6px;
-      }
-      
-      .modal-close:hover {
-        background: #f3f4f6;
-      }
-      
-      .modal-header {
-        margin-bottom: 24px;
-      }
-      
-      .modal-title {
-        font-size: 24px;
-        font-weight: 600;
-        color: #18181b;
-        margin-bottom: 8px;
-      }
-      
-      .modal-subtitle {
-        color: #6b7280;
-        font-size: 14px;
-      }
-      
-      /* Form Styles */
-      .form-group {
-        margin-bottom: 16px;
-      }
-      
-      .form-label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 500;
-        color: #374151;
-        font-size: 14px;
-      }
-      
-      .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-      }
-      
-      textarea.form-input {
-        resize: vertical;
-        min-height: 100px;
-        font-family: 'Inter', sans-serif;
-      }
-      
-      /* AI Buttons */
-      .ai-buttons {
-        display: flex;
-        gap: 8px;
-        margin-top: 8px;
-      }
-      
-      .ai-button {
-        font-size: 12px !important;
-        padding: 4px 8px !important;
-      }
-      
-      .form-actions {
-        display: flex;
-        gap: 12px;
-        margin-top: 24px;
-      }
-      
-      /* Mockup Modal */
-      .mockup-editor {
-        background: #fafafa;
-        border-radius: 12px;
-        padding: 24px;
-        margin-bottom: 20px;
-      }
-      
-      .mockup-preview {
-        height: 300px;
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 20px;
-        overflow: auto;
-      }
-      
-      .mockup-controls {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
-      }
-      
-      .control-group {
-        margin-bottom: 16px;
-      }
-      
-      .control-label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 500;
-        color: #374151;
-        font-size: 14px;
-      }
-      
-      .control-input {
-        width: 100%;
-        padding: 10px 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        font-size: 14px;
-        background: white;
-      }
-      
-      /* Product Status Badges */
-      .status-draft { background: #fffbeb; color: #d97706; }
-      .status-listed { background: #f0fdf4; color: #059669; }
-      .status-published { background: #f0fdf4; color: #059669; }
-      .status-archived { background: #f3f4f6; color: #6b7280; }
-      
-      /* Utility Classes */
-      .hidden {
-        display: none !important;
-      }
-      
-      .bg-blue-100 { background-color: #dbeafe; }
-      .text-blue-800 { color: #1e40af; }
-      
-      /* Loading Animation */
-      .loading-spinner {
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        border: 2px solid rgba(255,255,255,.3);
-        border-radius: 50%;
-        border-top-color: #fff;
-        animation: spin 1s ease-in-out infinite;
-      }
-      
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-      
-      /* Notification */
-      .notification {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 12px 24px;
-        border-radius: 8px;
-        color: white;
-        font-weight: 500;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      }
-      
-      .notification.success { background: #10b981; }
-      .notification.error { background: #ef4444; }
-      .notification.warning { background: #f59e0b; }
-      .notification.info { background: #3b82f6; }
-      
-      @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-      }
-      
-      @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-      }
-      
-      /* Responsive */
-      @media (max-width: 768px) {
-        .dashboard-layout {
-          flex-direction: column;
-        }
-        
-        .dashboard-sidebar {
-          width: 100%;
-          border-right: none;
-          border-bottom: 1px solid #e5e7eb;
-        }
-        
-        .sidebar-nav {
-          flex-direction: row;
-          overflow-x: auto;
-          padding: 16px;
-        }
-        
-        .sidebar-nav-item {
-          white-space: nowrap;
-        }
-        
-        .dashboard-main {
-          padding: 24px;
-        }
-        
-        .products-header {
-          flex-direction: column;
-          align-items: stretch;
-        }
-        
-        .header-actions {
-          justify-content: stretch;
-        }
-        
-        .products-grid {
-          grid-template-columns: 1fr;
-        }
-        
-        .form-row {
-          grid-template-columns: 1fr;
-        }
-        
-        .products-filters {
-          flex-direction: column;
-          align-items: stretch;
-        }
-        
-        .filter-group {
-          justify-content: space-between;
-        }
-        
-        .product-actions {
-          flex-direction: column;
-        }
-      }
-      
-      @media (max-width: 480px) {
-        .products-title h1 {
-          font-size: 24px;
-        }
-        
-        .header-actions {
-          flex-direction: column;
-        }
-        
-        .modal-content {
-          padding: 20px;
-        }
-      }
-    </style>
-  </head>
-  
-  <body class="dashboard-container">
-    <div class="dashboard-layout">
-      <!-- Sidebar -->
-      <aside class="dashboard-sidebar">
-        <div class="sidebar-header">
-          <div class="sidebar-logo">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-            </svg>
-          </div>
-          <div>
-            <div class="sidebar-title">Etsy AI POD</div>
-            <div class="sidebar-subtitle">PREMIUM PLATFORM</div>
-          </div>
-        </div>
+    // Kullanıcı bilgilerini güncelle
+    updateUserInfo();
+}
 
-        <nav class="sidebar-nav">
-          <a href="/dashboard.html" class="sidebar-nav-item">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-            </svg>
-            Dashboard
-          </a>
-          <a href="/products.html" class="sidebar-nav-item active">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
-            </svg>
-            Products
-          </a>
-          <a href="/orders.html" class="sidebar-nav-item">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-            </svg>
-            Orders
-          </a>
-          <a href="/payments.html" class="sidebar-nav-item">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
-            </svg>
-            Payments
-          </a>
-          <a href="/ai-assistant.html" class="sidebar-nav-item">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-            </svg>
-            AI Assistant
-          </a>
-          <a href="/settings.html" class="sidebar-nav-item">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            Settings
-          </a>
-        </nav>
+function updateUserInfo() {
+    const avatar = document.getElementById('user-avatar');
+    const name = document.getElementById('user-name');
+    const email = document.getElementById('user-email');
+    
+    if (avatar) avatar.textContent = 'DM';
+    if (name) name.textContent = 'Demo User';
+    if (email) email.textContent = currentUser.email;
+}
 
-        <div class="sidebar-user">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <div class="user-avatar" id="user-avatar">JD</div>
-            <div>
-              <div style="font-weight: 600; color: #18181b;" id="user-name">John Doe</div>
-              <div style="font-size: 12px; color: #6b7280;" id="user-email">admin@example.com</div>
+function setupEventListeners() {
+    // Yeni ürün butonları
+    document.getElementById('btn-new-product')?.addEventListener('click', showNewProductModal);
+    document.getElementById('btn-empty-new-product')?.addEventListener('click', showNewProductModal);
+    
+    // Trend analiz butonu
+    document.getElementById('btn-analyze-top-sellers')?.addEventListener('click', analyzeTopSellers);
+    
+    // Filtreler
+    document.getElementById('filter-status')?.addEventListener('change', filterProducts);
+    document.getElementById('filter-category')?.addEventListener('change', filterProducts);
+    
+    // Arama
+    document.getElementById('search-products')?.addEventListener('input', filterProducts);
+    
+    // Modal kapatma
+    document.getElementById('modal-product-close')?.addEventListener('click', () => closeModal('modal-product'));
+    document.getElementById('btn-cancel-product')?.addEventListener('click', () => closeModal('modal-product'));
+    document.getElementById('modal-mockup-close')?.addEventListener('click', () => closeModal('modal-mockup'));
+    
+    // Form submit
+    document.getElementById('form-product')?.addEventListener('submit', handleProductFormSubmit);
+    
+    // AI açıklama oluşturma
+    document.getElementById('btn-generate-description')?.addEventListener('click', generateDescriptionWithAI);
+    
+    // Modal dışına tıklama
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal')) {
+            closeModal(e.target.id);
+        }
+    });
+}
+
+function loadDemoProducts() {
+    // Demo ürünler
+    currentProducts = [
+        {
+            id: 'product-1',
+            title: 'Minimalist Black T-Shirt',
+            description: 'Comfortable cotton t-shirt with minimalist design',
+            category: 'tshirt',
+            price: 24.99,
+            status: 'published',
+            images: ['https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=400&fit=crop'],
+            created_at: new Date().toISOString(),
+            rating_stats: [{ average_rating: 4.5, monthly_sales_estimate: 45 }]
+        },
+        {
+            id: 'product-2',
+            title: 'Custom Coffee Mug',
+            description: 'Personalized ceramic mug for coffee lovers',
+            category: 'mug',
+            price: 18.99,
+            status: 'published',
+            images: ['https://images.unsplash.com/photo-1514228742587-6b1558fcf93a?w=400&h=400&fit=crop'],
+            created_at: new Date(Date.now() - 86400000).toISOString(),
+            rating_stats: [{ average_rating: 4.2, monthly_sales_estimate: 32 }]
+        },
+        {
+            id: 'product-3',
+            title: 'Wooden Phone Case',
+            description: 'Eco-friendly wooden phone case with protective design',
+            category: 'phone-case',
+            price: 29.99,
+            status: 'draft',
+            images: ['https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&h=400&fit=crop'],
+            created_at: new Date(Date.now() - 172800000).toISOString(),
+            rating_stats: [{ average_rating: 4.8, monthly_sales_estimate: 28 }]
+        },
+        {
+            id: 'product-4',
+            title: 'Minimalist Necklace',
+            description: 'Elegant silver necklace with geometric pendant',
+            category: 'jewelry',
+            price: 34.99,
+            status: 'published',
+            images: ['https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=400&fit=crop'],
+            created_at: new Date(Date.now() - 259200000).toISOString(),
+            rating_stats: [{ average_rating: 4.7, monthly_sales_estimate: 51 }]
+        },
+        {
+            id: 'product-5',
+            title: 'Decorative Wood Plate',
+            description: 'Handcrafted wooden plate for home decoration',
+            category: 'wood',
+            price: 22.99,
+            status: 'archived',
+            images: ['https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=400&fit=crop'],
+            created_at: new Date(Date.now() - 345600000).toISOString(),
+            rating_stats: [{ average_rating: 4.3, monthly_sales_estimate: 19 }]
+        },
+        {
+            id: 'product-6',
+            title: 'Ceramic Dinner Plate Set',
+            description: 'Set of 4 premium ceramic plates for elegant dining',
+            category: 'plate',
+            price: 39.99,
+            status: 'draft',
+            images: ['https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=400&fit=crop'],
+            created_at: new Date(Date.now() - 432000000).toISOString(),
+            rating_stats: [{ average_rating: 4.6, monthly_sales_estimate: 37 }]
+        }
+    ];
+    
+    renderProducts(currentProducts);
+}
+
+function renderProducts(products) {
+    const productsGrid = document.getElementById('products-grid');
+    const emptyState = document.getElementById('products-empty');
+    
+    if (!products || products.length === 0) {
+        if (productsGrid) productsGrid.innerHTML = '';
+        if (emptyState) emptyState.classList.remove('hidden');
+        return;
+    }
+    
+    if (emptyState) emptyState.classList.add('hidden');
+    if (!productsGrid) return;
+    
+    let html = '';
+    products.forEach(product => {
+        html += createProductCardHTML(product);
+    });
+    
+    productsGrid.innerHTML = html;
+    
+    // Ürün kartı butonlarına event listener ekle
+    attachProductCardListeners();
+}
+
+function createProductCardHTML(product) {
+    const statusClass = getProductStatusClass(product.status);
+    const statusText = getProductStatusText(product.status);
+    const price = parseFloat(product.price || 0).toFixed(2);
+    const rating = product.rating_stats?.[0];
+    const imageUrl = product.images && product.images.length > 0 ? 
+        product.images[0] : getRandomProductImage(product.category);
+    
+    return `
+        <div class="product-card" data-id="${product.id}" data-status="${product.status}" data-category="${product.category}">
+            <div class="product-image">
+                <img src="${imageUrl}" alt="${product.title}" 
+                     onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300/cccccc/969696?text=Product+Image';">
+                <div class="product-badge ${statusClass}">${statusText}</div>
+                <div class="price-badge">$${price}</div>
             </div>
-          </div>
+            <div class="product-content">
+                <div class="product-header">
+                    <h3 class="product-title">${truncateText(product.title, 40)}</h3>
+                </div>
+                <span class="product-category">${product.category}</span>
+                <p class="product-description">${truncateText(product.description || '', 80)}</p>
+                ${rating ? `
+                    <div class="product-rating">
+                        <span style="color: #fbbf24; font-weight: 600;">
+                            ★ ${rating.average_rating?.toFixed(1) || '0.0'}
+                        </span>
+                        <span style="color: #6b7280; font-size: 12px;">
+                            📈 ${rating.monthly_sales_estimate || '0'} sales/month
+                        </span>
+                    </div>
+                ` : ''}
+                <div class="product-actions">
+                    <button class="btn btn-primary btn-sm" data-action="mockup" data-product-id="${product.id}">
+                        Mockup
+                    </button>
+                    <button class="btn btn-outline btn-sm" data-action="edit" data-product-id="${product.id}">
+                        Edit
+                    </button>
+                    <button class="btn btn-outline btn-sm" data-action="similar" data-product-id="${product.id}">
+                        Similar
+                    </button>
+                    <button class="btn btn-outline btn-sm" data-action="delete" data-product-id="${product.id}">
+                        Delete
+                    </button>
+                </div>
+            </div>
         </div>
-      </aside>
+    `;
+}
 
-      <!-- Main Content -->
-      <main class="dashboard-main">
-        <!-- Header -->
-        <header class="products-header">
-          <div class="products-title">
-            <h1>Products</h1>
-            <p>Manage your product catalog and generate mockups</p>
-          </div>
-          <div class="header-actions" id="header-actions">
-            <button class="btn btn-outline" id="btn-analyze-top-sellers">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
-              </svg>
-              Analyze Top Sellers
-            </button>
-            <button class="btn btn-primary" id="btn-new-product">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-              </svg>
-              New Product
-            </button>
-          </div>
-        </header>
+function attachProductCardListeners() {
+    // Edit button
+    document.querySelectorAll('[data-action="edit"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            editProduct(productId);
+        });
+    });
+    
+    // Delete button
+    document.querySelectorAll('[data-action="delete"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            deleteProduct(productId);
+        });
+    });
+    
+    // Mockup button
+    document.querySelectorAll('[data-action="mockup"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            generateMockups(productId);
+        });
+    });
+    
+    // Similar button
+    document.querySelectorAll('[data-action="similar"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            createSimilarProduct(productId);
+        });
+    });
+}
 
-        <!-- Search Bar -->
-        <div style="margin-bottom: 24px;">
-          <input 
-            type="text" 
-            id="search-products" 
-            placeholder="Search products..."
-            class="form-input"
-            style="width: 100%; max-width: 400px;"
-          />
-        </div>
-
-        <!-- Filters -->
-        <div class="products-filters">
-          <div class="filter-group">
-            <label class="filter-label">Status:</label>
-            <select class="select-input" id="filter-status">
-              <option value="">All Status</option>
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="archived">Archived</option>
-            </select>
-          </div>
-          
-          <div class="filter-group">
-            <label class="filter-label">Category:</label>
-            <select class="select-input" id="filter-category">
-              <option value="">All Categories</option>
-              <option value="tshirt">T-Shirt</option>
-              <option value="mug">Mug</option>
-              <option value="plate">Plate</option>
-              <option value="phone-case">Phone Case</option>
-              <option value="jewelry">Jewelry</option>
-              <option value="wood">Wood Product</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Products Grid -->
-        <div class="products-grid" id="products-grid">
-          <!-- Products will be loaded here -->
-        </div>
-
-        <!-- Empty State -->
-        <div class="products-empty hidden" id="products-empty">
-          <div class="empty-icon">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
-            </svg>
-          </div>
-          <h3 class="empty-title">No products yet</h3>
-          <p class="empty-description">Create your first product to get started with your Etsy POD business</p>
-          <button class="btn btn-primary" id="btn-empty-new-product">
-            Create First Product
-          </button>
-        </div>
-      </main>
-    </div>
-
-    <!-- Product Modal -->
-    <div class="modal" id="modal-product">
-      <div class="modal-content" style="max-width: 600px;">
-        <button class="modal-close" id="modal-product-close">&times;</button>
-        <div class="modal-header">
-          <h2 class="modal-title" id="modal-product-title">New Product</h2>
-          <p class="modal-subtitle">Add a new product to your catalog</p>
-        </div>
+// Filtreleme fonksiyonu
+function filterProducts() {
+    const status = document.getElementById('filter-status')?.value || '';
+    const category = document.getElementById('filter-category')?.value || '';
+    const search = document.getElementById('search-products')?.value.toLowerCase() || '';
+    
+    const filtered = currentProducts.filter(product => {
+        // Status filter
+        if (status && product.status !== status) return false;
         
-        <form id="form-product">
-          <input type="hidden" id="product-id" />
-          
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label" for="product-title">Product Title</label>
-              <input
-                type="text"
-                id="product-title"
-                required
-                placeholder="Enter product title"
-                class="form-input"
-              />
-            </div>
-            
-            <div class="form-group">
-              <label class="form-label" for="product-category">Category</label>
-              <select
-                id="product-category"
-                required
-                class="select-input"
-              >
-                <option value="">Select category</option>
-                <option value="tshirt">T-Shirt</option>
-                <option value="mug">Mug</option>
-                <option value="plate">Plate</option>
-                <option value="phone-case">Phone Case</option>
-                <option value="jewelry">Jewelry</option>
-                <option value="wood">Wood Product</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label" for="product-price">Price (USD)</label>
-              <input
-                type="number"
-                id="product-price"
-                step="0.01"
-                min="0"
-                required
-                placeholder="0.00"
-                class="form-input"
-              />
-            </div>
-            
-            <div class="form-group">
-              <label class="form-label" for="product-status">Status</label>
-              <select
-                id="product-status"
-                class="select-input"
-              >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="product-description">Description</label>
-            <textarea
-              id="product-description"
-              rows="4"
-              placeholder="Enter product description..."
-              class="form-input"
-            ></textarea>
-            <div class="ai-buttons">
-              <button type="button" class="btn btn-outline btn-sm ai-button" id="btn-generate-description">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="12" height="12">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                </svg>
-                AI Generate
-              </button>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary btn-flex">Save Product</button>
-            <button type="button" class="btn btn-outline btn-flex" id="btn-cancel-product">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Mockup Generation Modal -->
-    <div class="modal" id="modal-mockup">
-      <div class="modal-content" style="max-width: 800px;">
-        <button class="modal-close" id="modal-mockup-close">&times;</button>
-        <div class="modal-header">
-          <h2 class="modal-title">Generate Mockups</h2>
-          <p class="modal-subtitle">Create professional product mockups for your designs</p>
-        </div>
+        // Category filter
+        if (category && product.category !== category) return false;
         
-        <div id="mockup-editor-container">
-          <!-- Mockup editor will be loaded here -->
+        // Search filter
+        if (search) {
+            const searchText = `${product.title} ${product.description} ${product.category}`.toLowerCase();
+            if (!searchText.includes(search)) return false;
+        }
+        
+        return true;
+    });
+    
+    renderProducts(filtered);
+}
+
+// Modal fonksiyonları
+function showNewProductModal() {
+    resetProductForm();
+    document.getElementById('modal-product-title').textContent = 'New Product';
+    document.getElementById('modal-product').classList.add('active');
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+function resetProductForm() {
+    const form = document.getElementById('form-product');
+    if (form) {
+        form.reset();
+        document.getElementById('product-id').value = '';
+        document.getElementById('product-status').value = 'draft';
+    }
+}
+
+function handleProductFormSubmit(e) {
+    e.preventDefault();
+    
+    const title = document.getElementById('product-title').value.trim();
+    const category = document.getElementById('product-category').value;
+    const price = document.getElementById('product-price').value;
+    const status = document.getElementById('product-status').value;
+    const description = document.getElementById('product-description').value.trim();
+    const productId = document.getElementById('product-id').value;
+    
+    if (!title || !category || !price) {
+        showNotification('Please fill all required fields', 'error');
+        return;
+    }
+    
+    if (productId) {
+        // Update existing product
+        const index = currentProducts.findIndex(p => p.id === productId);
+        if (index !== -1) {
+            currentProducts[index] = {
+                ...currentProducts[index],
+                title,
+                category,
+                price: parseFloat(price),
+                status,
+                description,
+                updated_at: new Date().toISOString()
+            };
+            showNotification('Product updated successfully', 'success');
+        }
+    } else {
+        // Create new product
+        const newProduct = {
+            id: 'product-' + Date.now(),
+            title,
+            description,
+            category,
+            price: parseFloat(price),
+            status,
+            images: [getRandomProductImage(category)],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            user_id: currentUser.id,
+            rating_stats: [{ average_rating: 0, monthly_sales_estimate: 0 }]
+        };
+        
+        currentProducts.unshift(newProduct);
+        showNotification('Product created successfully', 'success');
+    }
+    
+    closeModal('modal-product');
+    renderProducts(currentProducts);
+}
+
+function editProduct(productId) {
+    const product = currentProducts.find(p => p.id === productId);
+    if (!product) return;
+    
+    document.getElementById('modal-product-title').textContent = 'Edit Product';
+    document.getElementById('product-id').value = product.id;
+    document.getElementById('product-title').value = product.title || '';
+    document.getElementById('product-category').value = product.category || '';
+    document.getElementById('product-price').value = product.price || '';
+    document.getElementById('product-status').value = product.status || 'draft';
+    document.getElementById('product-description').value = product.description || '';
+    
+    document.getElementById('modal-product').classList.add('active');
+}
+
+function deleteProduct(productId) {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+    
+    currentProducts = currentProducts.filter(p => p.id !== productId);
+    showNotification('Product deleted successfully', 'success');
+    renderProducts(currentProducts);
+}
+
+function generateDescriptionWithAI() {
+    const title = document.getElementById('product-title').value.trim();
+    const category = document.getElementById('product-category').value;
+    
+    if (!title) {
+        showNotification('Please enter product title first', 'warning');
+        return;
+    }
+    
+    // Mock AI description
+    const descriptions = [
+        `${title} - Premium quality product with excellent craftsmanship and attention to detail.`,
+        `${title} features high-quality materials and durable construction. Perfect for ${category || 'everyday use'}.`,
+        `Handcrafted ${title} made with care and precision. Each piece is unique and carefully inspected.`,
+        `${title} combines modern design with traditional techniques. A perfect gift for any occasion.`
+    ];
+    
+    const randomDescription = descriptions[Math.floor(Math.random() * descriptions.length)];
+    document.getElementById('product-description').value = randomDescription;
+    showNotification('AI description generated', 'success');
+}
+
+function analyzeTopSellers() {
+    showNotification('Analyzing Etsy trends... (Demo Mode)', 'info');
+    
+    // Mock trend data
+    const trends = [
+        {
+            id: 'trend-1',
+            title: 'Personalized Pet Portrait',
+            category: 'art',
+            price: 34.99,
+            monthly_sales: 156,
+            trend_score: 85
+        },
+        {
+            id: 'trend-2',
+            title: 'Minimalist T-Shirt Design',
+            category: 'tshirt',
+            price: 24.99,
+            monthly_sales: 189,
+            trend_score: 88
+        },
+        {
+            id: 'trend-3',
+            title: 'Custom Coffee Mug',
+            category: 'mug',
+            price: 18.99,
+            monthly_sales: 245,
+            trend_score: 92
+        }
+    ];
+    
+    // Show trends modal
+    showTrendsModal(trends);
+}
+
+function showTrendsModal(trends) {
+    const container = document.getElementById('top-seller-modal-container');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="modal active" id="top-seller-modal">
+            <div class="modal-content" style="max-width: 800px;">
+                <button class="modal-close" onclick="closeTrendsModal()">&times;</button>
+                <div class="modal-header">
+                    <h2 class="modal-title">Trending Products Analysis</h2>
+                    <p class="modal-subtitle">${trends.length} trending products found (Demo Mode)</p>
+                </div>
+                
+                <div style="padding: 20px;">
+                    ${trends.map(trend => `
+                        <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h3 style="font-weight: 600; margin-bottom: 4px;">${trend.title}</h3>
+                                    <div style="display: flex; gap: 12px; font-size: 12px; color: #6b7280;">
+                                        <span>$${trend.price}</span>
+                                        <span>${trend.category}</span>
+                                        <span>📈 ${trend.monthly_sales} sales/month</span>
+                                        <span>🔥 ${trend.trend_score} trend score</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary btn-sm" onclick="createFromTrend('${trend.id}')">
+                                    Create
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                    <button class="btn btn-outline" onclick="closeTrendsModal()">
+                        Close
+                    </button>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
+    `;
+}
 
-    <!-- Top Sellers Modal (Dynamic) -->
-    <div id="top-seller-modal-container"></div>
+window.closeTrendsModal = function() {
+    const modal = document.getElementById('top-seller-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            document.getElementById('top-seller-modal-container').innerHTML = '';
+        }, 300);
+    }
+};
 
-    <!-- JavaScript -->
-    <script src="/assets/js/products.js"></script>
-  </body>
-</html>
+window.createFromTrend = function(trendId) {
+    showNotification('Creating product from trend...', 'success');
+    closeTrendsModal();
+};
+
+function generateMockups(productId) {
+    showNotification('Generating mockups... (Demo Mode)', 'info');
+    setTimeout(() => {
+        showNotification('Mockups generated successfully', 'success');
+    }, 1000);
+}
+
+function createSimilarProduct(productId) {
+    const original = currentProducts.find(p => p.id === productId);
+    if (!original) return;
+    
+    const variations = ['Minimalist', 'Vintage', 'Modern', 'Colorful', 'Premium'];
+    const variation = variations[Math.floor(Math.random() * variations.length)];
+    
+    const newProduct = {
+        id: 'similar-' + Date.now(),
+        title: `${variation} ${original.title}`,
+        description: `${variation} version of ${original.title}`,
+        category: original.category,
+        price: (parseFloat(original.price) * (0.9 + Math.random() * 0.2)).toFixed(2),
+        status: 'draft',
+        images: [getRandomProductImage(original.category)],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        user_id: currentUser.id,
+        rating_stats: [{ average_rating: 0, monthly_sales_estimate: 0 }]
+    };
+    
+    currentProducts.unshift(newProduct);
+    showNotification('Similar product created successfully', 'success');
+    renderProducts(currentProducts);
+}
+
+// Utility functions
+function getProductStatusClass(status) {
+    return {
+        'draft': 'status-draft',
+        'published': 'status-published',
+        'archived': 'status-archived'
+    }[status] || 'status-draft';
+}
+
+function getProductStatusText(status) {
+    return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function getRandomProductImage(category) {
+    const images = {
+        'tshirt': 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=300&fit=crop',
+        'mug': 'https://images.unsplash.com/photo-1514228742587-6b1558fcf93a?w=400&h=300&fit=crop',
+        'plate': 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=300&fit=crop',
+        'phone-case': 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&h=300&fit=crop',
+        'jewelry': 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=300&fit=crop',
+        'wood': 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=300&fit=crop'
+    };
+    
+    return images[category] || 'https://images.unsplash.com/photo-1563241527-3004b7be0ffd?w=400&h=300&fit=crop';
+}
+
+function truncateText(text, maxLength) {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+}
+
+function showNotification(message, type = 'info') {
+    // Remove existing notifications
+    document.querySelectorAll('.notification').forEach(el => el.remove());
+    
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// Make functions available globally
+window.closeModal = closeModal;
+window.showNotification = showNotification;
+
+console.log('Products.js loaded successfully in demo mode');
