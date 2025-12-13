@@ -855,6 +855,76 @@
       </div>
     </div>
 
+
+<!-- Add to product modal -->
+<div class="modal" id="modal-publish">
+  <div class="modal-content">
+    <h3>Publish to Marketplaces</h3>
+    
+    <div class="publish-options">
+      <div class="marketplace-selector">
+        <h4>Select Marketplaces</h4>
+        <div class="checkbox-group">
+          <label>
+            <input type="checkbox" name="marketplace" value="etsy" checked>
+            <img src="/assets/icons/etsy.svg" alt="Etsy"> Etsy
+          </label>
+          <label>
+            <input type="checkbox" name="marketplace" value="amazon">
+            <img src="/assets/icons/amazon.svg" alt="Amazon"> Amazon
+          </label>
+          <label>
+            <input type="checkbox" name="marketplace" value="shopify">
+            <img src="/assets/icons/shopify.svg" alt="Shopify"> Shopify
+          </label>
+        </div>
+      </div>
+
+      <div class="pricing-settings">
+        <h4>Pricing Strategy</h4>
+        <div class="form-group">
+          <label>Base Price: $<span id="base-price">24.99</span></label>
+          <div class="price-adjustments">
+            <div class="adjustment">
+              <span>Etsy:</span>
+              <input type="number" value="29.99" data-marketplace="etsy">
+              <span class="profit">+$5.00 profit</span>
+            </div>
+            <div class="adjustment">
+              <span>Amazon:</span>
+              <input type="number" value="27.99" data-marketplace="amazon">
+              <span class="profit">+$3.00 profit</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ai-optimization">
+        <h4>AI Optimization</h4>
+        <label>
+          <input type="checkbox" id="optimize-titles" checked>
+          Optimize titles for each marketplace
+        </label>
+        <label>
+          <input type="checkbox" id="optimize-description" checked>
+          Generate marketplace-specific descriptions
+        </label>
+        <label>
+          <input type="checkbox" id="generate-tags" checked>
+          Generate optimized tags/keywords
+        </label>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-publish')">Cancel</button>
+      <button class="btn btn-primary" onclick="publishToSelected()">
+        <span id="publish-button-text">Publish to 1 Marketplace</span>
+      </button>
+    </div>
+  </div>
+</div>
+
     <!-- JavaScript Import -->
     <script src="/assets/js/env.js"></script>
     <script type="module" src="/assets/js/supabaseClient.js"></script>
