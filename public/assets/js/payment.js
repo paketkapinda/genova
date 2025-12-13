@@ -561,6 +561,241 @@ if (document.getElementById('payments-container')) {
   loadPayments();
 }
 
+// ÖNCEKİ (Hatalı kod - payment.js satır ~150):
+async function syncAllPayments() {
+  // Etsy API hatası - mock data'ya düşüyor
+  const mockPayments = etsy_market.payments;
+  // ...
+}
+
+// SONRAKİ (Düzeltilmiş):
+class PaymentSyncManager {
+  constructor() {
+    this.maxRetries = 3;
+    this.retryDelay = 1000;
+  }
+
+  async syncAllMarketplacePayments() {
+    try {
+      // 1. Get all active marketplace integrations
+      const { data: integrations } = await supabase
+        .from('integrations')
+        .select('*')
+        .eq('is_active', true)
+        .in('marketplace_type', ['etsy', 'amazon', 'shopify'])
+        .eq('user_id', userId);
+
+      if (!integrations?.length) {
+        throw new Error('No active marketplace integrations found');
+      }
+
+      const allPayments = [];
+      
+      // 2. Sync payments from each marketplace
+      for (const integration of integrations) {
+        try {
+          const payments = await this.syncMarketplacePayments(integration);
+          allPayments.push(...payments);
+        } catch (error) {
+          console.error(`Failed to sync ${integration.marketplace_type}:`, error);
+          // Continue with other integrations
+        }
+      }
+
+      // 3. Reconcile payments
+      await this.reconcilePayments(allPayments);
+
+      // 4. Update UI
+      await this.updatePaymentDashboard(allPayments);
+
+      return {
+        success: true,
+        payments: allPayments,
+        synced_at: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Payment sync failed:', error);
+      throw error;
+    }
+  }
+
+  async syncMarketplacePayments(integration) {
+    switch (integration.marketplace_type) {
+      case 'etsy':
+        return await this.syncEtsyPayments(integration);
+      case 'amazon':
+        return await this.syncAmazonPayments(integration);
+      case 'shopify':
+        return await this.syncShopifyPayments(integration);
+      default:
+        return [];
+    }
+  }
+
+  async syncEtsyPayments(integration, retryCount = 0) {
+    try {
+      const etsyApi = new EtsyAPI({
+        apiKey: integration.api_key,
+        accessToken: integration.access_token,
+        shopId: integration.shop_name
+      });
+
+      // Get payments from last sync or last 30 days
+      const lastSync = await this.getLastSyncDate('etsy', integration.id);
+      const params = {
+        min_created: Math.floor(lastSync.getTime() / 1000),
+        limit: 100
+      };
+
+      const response = await etsyApi.getShopPayments(params);
+      
+      // Transform Etsy payment data
+      const payments = response.results.map(payment => ({
+        id: `etsy_${payment.payment_id}`,
+        marketplace: 'etsy',
+        integration_id: integration.id,
+        order_id: payment.receipt_id,
+        amount: parseFloat(payment.amount_gross.amount) / parseFloat(payment.amount_gross.divisor),
+        currency: payment.amount_gross.currency_code,
+        fees: this.calculateEtsyFees(payment),
+        net_amount: this.calculateNetAmount(payment),
+        status: this.mapEtsyPaymentStatus(payment.status),
+        payment_date: new Date(payment.created_timestamp * 1000).toISOString(),
+        transaction_id: payment.payment_id,
+        metadata: payment
+      }));
+
+      // Save to database
+      await this.savePayments(payments);
+
+      return payments;
+    } catch (error) {
+      if (retryCount < this.maxRetries) {
+        await this.delay(this.retryDelay * Math.pow(2, retryCount));
+        return this.syncEtsyPayments(integration, retryCount + 1);
+      }
+      throw error;
+    }
+  }
+
+  async syncAmazonPayments(integration) {
+    const amazonApi = new AmazonSPAPI({
+      credentials: {
+        refresh_token: integration.refresh_token,
+        client_id: integration.api_key,
+        client_secret: integration.api_secret
+      },
+      region: integration.settings?.region || 'na'
+    });
+
+    // Get settlement reports
+    const settlementReports = await amazonApi.getSettlementReports({
+      reportTypes: ['GET_V2_SETTLEMENT_REPORT_DATA_FLAT_FILE'],
+      createdSince: await this.getLastSyncDate('amazon', integration.id)
+    });
+
+    const payments = [];
+    
+    for (const report of settlementReports.reports) {
+      const reportData = await amazonApi.getReport(report.reportId);
+      
+      // Parse Amazon settlement report
+      const parsedPayments = this.parseAmazonSettlement(reportData);
+      payments.push(...parsedPayments);
+    }
+
+    return payments;
+  }
+
+  async reconcilePayments(payments) {
+    // Match payments with orders in database
+    for (const payment of payments) {
+      const { data: existingOrder } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('marketplace_order_id', payment.order_id)
+        .eq('integration_id', payment.integration_id)
+        .single();
+
+      if (existingOrder) {
+        // Update order payment status
+        await supabase
+          .from('orders')
+          .update({
+            payment_status: payment.status,
+            payment_id: payment.id,
+            paid_at: payment.payment_date,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingOrder.id);
+
+        // Create payment record
+        await supabase.from('payments').upsert({
+          id: payment.id,
+          user_id: userId,
+          order_id: existingOrder.id,
+          amount: payment.amount,
+          net_amount: payment.net_amount,
+          currency: payment.currency,
+          fees: payment.fees,
+          status: payment.status,
+          transaction_id: payment.transaction_id,
+          payment_date: payment.payment_date,
+          metadata: payment.metadata,
+          reconciled: true,
+          reconciled_at: new Date().toISOString()
+        });
+      } else {
+        // Create orphan payment record for manual reconciliation
+        await supabase.from('payments').upsert({
+          id: payment.id,
+          user_id: userId,
+          amount: payment.amount,
+          net_amount: payment.net_amount,
+          currency: payment.currency,
+          status: payment.status,
+          transaction_id: payment.transaction_id,
+          payment_date: payment.payment_date,
+          metadata: payment.metadata,
+          reconciled: false,
+          needs_review: true
+        });
+      }
+    }
+  }
+
+  // Helper methods
+  calculateEtsyFees(payment) {
+    const fees = {
+      listing_fee: 0.20,
+      transaction_fee: payment.amount_gross.amount * 0.065,
+      payment_processing: payment.amount_gross.amount * 0.03 + 0.25,
+      shipping_transaction: payment.shipping_cost ? payment.shipping_cost.amount * 0.065 : 0
+    };
+    
+    return fees;
+  }
+
+  calculateNetAmount(payment) {
+    const gross = parseFloat(payment.amount_gross.amount) / parseFloat(payment.amount_gross.divisor);
+    const fees = this.calculateEtsyFees(payment);
+    const totalFees = Object.values(fees).reduce((a, b) => a + b, 0);
+    
+    return gross - totalFees;
+  }
+
+  mapEtsyPaymentStatus(status) {
+    const statusMap = {
+      'completed': 'completed',
+      'pending': 'pending',
+      'failed': 'failed',
+      'refunded': 'refunded'
+    };
+    
+    return statusMap[status] || 'unknown';
+  }
+}
+
 // Add CSS for animations
 const style = document.createElement('style');
 style.textContent = `
