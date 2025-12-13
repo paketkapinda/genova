@@ -186,6 +186,167 @@ window.generateProductMockups = async (productId) => {
   }
 };
 
+// ÖNCEKİ (Statik mockup):
+async function generateMockup(product, designUrl) {
+  // Basic image overlay
+  return staticMockup;
+}
+
+// SONRAKİ (Gerçek Görsel İşleme Pipeline):
+class MockupPipeline {
+  constructor() {
+    this.canvas = document.createElement('canvas');
+    this.ctx = this.canvas.getContext('2d');
+  }
+
+  async generateVariations(product, designUrl, options = {}) {
+    const variations = [];
+    
+    // 1. Generate different angles/perspectives
+    const perspectives = ['front', 'back', 'left', 'right', 'angle'];
+    
+    for (const perspective of perspectives) {
+      // 2. Load base mockup template
+      const template = await this.loadTemplate(product.category, perspective);
+      
+      // 3. Process design image
+      const processedDesign = await this.processDesign(designUrl, {
+        size: template.designArea,
+        colorAdjustment: options.colorAdjustment,
+        perspective: perspective
+      });
+      
+      // 4. Compose mockup
+      const mockup = await this.composeMockup(template, processedDesign);
+      
+      // 5. Apply realistic effects
+      const finalMockup = await this.applyEffects(mockup, {
+        lighting: 'natural',
+        shadows: true,
+        texture: product.material,
+        wrinkles: options.realisticWrinkles || false
+      });
+      
+      variations.push({
+        perspective,
+        image: finalMockup,
+        thumbnail: await this.createThumbnail(finalMockup)
+      });
+    }
+    
+    return variations;
+  }
+
+  async processDesign(designUrl, options) {
+    // Use Fabric.js or similar for design processing
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        this.canvas.width = options.size.width;
+        this.canvas.height = options.size.height;
+        
+        this.ctx.save();
+        
+        // Apply perspective transformation
+        if (options.perspective === 'angle') {
+          this.ctx.transform(1, 0.2, -0.1, 1, 0, 0);
+        }
+        
+        // Draw design
+        this.ctx.drawImage(img, 0, 0, options.size.width, options.size.height);
+        
+        // Apply color adjustment
+        if (options.colorAdjustment) {
+          this.applyColorAdjustment(options.colorAdjustment);
+        }
+        
+        this.ctx.restore();
+        resolve(this.canvas.toDataURL('image/png'));
+      };
+      img.src = designUrl;
+    });
+  }
+
+  async composeMockup(template, design) {
+    return new Promise((resolve) => {
+      const templateImg = new Image();
+      const designImg = new Image();
+      
+      templateImg.onload = () => {
+        designImg.onload = () => {
+          this.canvas.width = templateImg.width;
+          this.canvas.height = templateImg.height;
+          
+          // Draw template
+          this.ctx.drawImage(templateImg, 0, 0);
+          
+          // Draw design on template's design area
+          this.ctx.save();
+          this.ctx.globalCompositeOperation = 'multiply';
+          this.ctx.drawImage(
+            designImg,
+            template.designArea.x,
+            template.designArea.y,
+            template.designArea.width,
+            template.designArea.height
+          );
+          this.ctx.restore();
+          
+          resolve(this.canvas.toDataURL('image/png'));
+        };
+        designImg.src = design;
+      };
+      templateImg.src = template.url;
+    });
+  }
+}
+
+// AI-Powered Mockup Generation
+async function generateAIMockupVariations(product, prompt) {
+  const openaiApi = await getOpenAIClient();
+  const mockupPipeline = new MockupPipeline();
+  
+  // 1. Generate design variations with DALL-E
+  const designVariations = await openaiApi.images.generate({
+    model: "dall-e-3",
+    prompt: `${prompt} - ${product.category} design, high quality, vector style`,
+    n: 3,
+    size: "1024x1024",
+    quality: "hd",
+    style: "natural"
+  });
+  
+  // 2. Apply designs to different mockups
+  const allMockups = [];
+  
+  for (const design of designVariations.data) {
+    const variations = await mockupPipeline.generateVariations(
+      product,
+      design.url,
+      {
+        colorAdjustment: { brightness: 10, contrast: 5 },
+        realisticWrinkles: true
+      }
+    );
+    
+    allMockups.push({
+      design: design.url,
+      variations,
+      designPrompt: prompt
+    });
+  }
+  
+  // Save to database
+  await supabase.from('product_mockups').insert({
+    product_id: product.id,
+    mockups: allMockups,
+    generated_at: new Date().toISOString()
+  });
+  
+  return allMockups;
+}
+
 window.useMockup = (mockupUrl) => {
   // Seçilen mockup'ı product'a ata
   showNotification('Mockup selected for product', 'success');
