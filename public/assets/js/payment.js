@@ -1,22 +1,19 @@
 import { supabase } from './supabaseClient.js';
 
 /* ======================================================
-   PROVIDER HANDLERS (TEK NOKTA)
+   PROVIDER HANDLER MAP
 ====================================================== */
-
 const PAYMENT_PROVIDERS = {
   etsy: fetchEtsyPayments,
   amazon: fetchAmazonPayments,
   shopify: fetchShopifyPayments
-  // yeni kanal = buraya 1 satır
 };
 
 /* ======================================================
-   TOKEN HELPERS (ETSY ÖRNEĞİ)
+   TOKEN HELPERS (ETSY)
 ====================================================== */
-
 async function refreshEtsyTokenIfNeeded(integration) {
-  if (new Date(integration.expires_at) > new Date()) {
+  if (integration.expires_at && new Date(integration.expires_at) > new Date()) {
     return integration.access_token;
   }
 
@@ -34,7 +31,8 @@ async function refreshEtsyTokenIfNeeded(integration) {
 
   const data = await res.json();
 
-  await supabase.from('integrations')
+  await supabase
+    .from('integrations')
     .update({
       access_token: data.access_token,
       refresh_token: data.refresh_token,
@@ -48,10 +46,10 @@ async function refreshEtsyTokenIfNeeded(integration) {
 /* ======================================================
    PROVIDER IMPLEMENTATIONS
 ====================================================== */
-
 async function fetchEtsyPayments(integration) {
   const token = await refreshEtsyTokenIfNeeded(integration);
-  let all = [];
+
+  let payments = [];
   let offset = 0;
   const limit = 50;
 
@@ -64,71 +62,64 @@ async function fetchEtsyPayments(integration) {
     if (!res.ok) break;
 
     const json = await res.json();
-    if (!json.results?.length) break;
+    if (!json.results || json.results.length === 0) break;
 
-    all.push(...json.results);
+    payments.push(...json.results);
 
     if (json.results.length < limit) break;
     offset += limit;
   }
 
-  return all;
+  return payments;
 }
 
-/* ---------- PLACEHOLDERS (NO CRASH) ---------- */
-
-async function fetchAmazonPayments(integration) {
-  console.warn('Amazon Payments not implemented yet');
+async function fetchAmazonPayments() {
+  console.warn('Amazon payments not implemented yet');
   return [];
 }
 
-async function fetchShopifyPayments(integration) {
-  console.warn('Shopify Payments not implemented yet');
+async function fetchShopifyPayments() {
+  console.warn('Shopify payments not implemented yet');
   return [];
 }
 
 /* ======================================================
    SAVE PAYMENTS
 ====================================================== */
-
 async function savePayments(integration, payments) {
   for (const p of payments) {
-    await supabase.from('payments_raw').upsert({
-      integration_id: integration.id,
-      external_payment_id: p.payment_id || p.id,
-      raw: p
-    });
-
     await supabase.from('payments').upsert({
       integration_id: integration.id,
       external_payment_id: p.payment_id || p.id,
-      order_id: p.order_id || p.order?.id,
+      order_id: p.order_id || null,
       amount: p.amount?.value || p.amount || 0,
-      currency: p.amount?.currency || p.currency || 'USD',
+      currency: p.amount?.currency || 'USD',
       status: p.status || 'paid',
-      payment_date: p.create_date || p.created_at,
+      payment_date: p.create_date || new Date().toISOString(),
       provider: integration.provider
     });
   }
 }
 
 /* ======================================================
-   MAIN SYNC (AUTO SCAN ACTIVE CHANNELS)
+   GLOBAL FUNCTIONS (HTML TARAFINDAN ÇAĞRILIR)
 ====================================================== */
+window.syncAllPayments = async function () {
+  console.log('🔄 Syncing payments...');
 
-async function syncPayments() {
-  const { data: integrations } = await supabase
+  const { data: integrations, error } = await supabase
     .from('integrations')
     .select('*')
     .eq('is_active', true);
 
+  if (error) {
+    console.error('Integration fetch error', error);
+    return;
+  }
+
   for (const integration of integrations) {
     const handler = PAYMENT_PROVIDERS[integration.provider];
-
-    if (!handler) {
-      console.warn(`No payment handler for ${integration.provider}`);
-      continue;
-    }
+    if (!handler) continue;
 
     try {
       const payments = await handler(integration);
@@ -141,40 +132,58 @@ async function syncPayments() {
     }
   }
 
-  await renderPayments();
-}
+  await window.loadPayments();
+};
 
-/* ======================================================
-   UI RENDER
-====================================================== */
+window.loadPayments = async function () {
+  const container = document.getElementById('payments-container');
 
-async function renderPayments() {
-  const { data } = await supabase
+  // 🔐 EN KRİTİK SATIR – SAYFA PAYMENTS DEĞİLSE ÇIK
+  if (!container) return;
+
+  const { data, error } = await supabase
     .from('payments')
     .select('*')
     .order('payment_date', { ascending: false });
 
-  const tbody = document.getElementById('paymentsTable');
-  tbody.innerHTML = '';
+  if (error) {
+    console.error('Payments load error', error);
+    return;
+  }
 
-  data.forEach(p => {
-    tbody.innerHTML += `
-      <tr>
-        <td>${p.provider}</td>
-        <td>${p.order_id || '-'}</td>
-        <td>${p.amount} ${p.currency}</td>
-        <td>${p.status}</td>
-        <td>${new Date(p.payment_date).toLocaleString()}</td>
-      </tr>
-    `;
-  });
-}
+  container.innerHTML = `
+    <table class="table payments-table">
+      <thead>
+        <tr>
+          <th>Provider</th>
+          <th>Order</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data.map(p => `
+          <tr>
+            <td>${p.provider}</td>
+            <td>${p.order_id || '-'}</td>
+            <td>${p.amount} ${p.currency}</td>
+            <td>${p.status}</td>
+            <td>${new Date(p.payment_date).toLocaleString()}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+};
+
+window.processAllPayouts = function () {
+  alert('Payout processing will be implemented next');
+};
 
 /* ======================================================
-   EVENTS
+   AUTO LOAD (SADECE UYGUN SAYFADA)
 ====================================================== */
-
-document.getElementById('syncPayments')
-  ?.addEventListener('click', syncPayments);
-
-renderPayments();
+document.addEventListener('DOMContentLoaded', () => {
+  window.loadPayments();
+});
