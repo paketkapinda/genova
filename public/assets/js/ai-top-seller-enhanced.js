@@ -493,3 +493,136 @@ function getTrendScoreStyle(score) {
   if (score >= 60) return 'background: linear-gradient(135deg, #f59e0b, #d97706);';
   return 'background: linear-gradient(135deg, #6b7280, #4b5563);';
 }
+
+// ÖNCEKİ (Mock Data):
+async function analyzeTopSellers() {
+  const mockTrends = etsy_market.trends;
+  // ... mock veri kullanımı
+}
+
+// SONRAKİ (Gerçek API):
+async function analyzeTopSellers(marketplace = 'etsy', category = null) {
+  try {
+    // 1. Get active integrations for marketplace
+    const { data: integrations } = await supabase
+      .from('integrations')
+      .select('*')
+      .eq('marketplace_type', marketplace)
+      .eq('is_active', true)
+      .eq('user_id', userId);
+
+    if (!integrations?.length) {
+      throw new Error(`No active ${marketplace} integration found`);
+    }
+
+    const allTrends = [];
+    
+    for (const integration of integrations) {
+      let trends;
+      switch (marketplace) {
+        case 'etsy':
+          trends = await fetchEtsyTrends(integration, category);
+          break;
+        case 'amazon':
+          trends = await fetchAmazonTrends(integration, category);
+          break;
+        default:
+          trends = [];
+      }
+      
+      // Enhance with AI analysis
+      const enhancedTrends = await enhanceTrendsWithAI(trends, marketplace);
+      allTrends.push(...enhancedTrends);
+    }
+
+    // 2. AI-Powered Trend Analysis
+    const analyzedTrends = await analyzeWithAI(allTrends, {
+      marketplace,
+      category,
+      timeframe: '30d'
+    });
+
+    // 3. Generate product ideas
+    const productIdeas = await generateProductIdeas(analyzedTrends);
+
+    return {
+      trends: analyzedTrends,
+      productIdeas,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Trend analysis error:', error);
+    throw error;
+  }
+}
+
+async function fetchEtsyTrends(integration, category = null) {
+  const etsyApi = new EtsyAPI({
+    apiKey: integration.api_key,
+    accessToken: integration.access_token
+  });
+
+  // Real API call to Etsy's search endpoint
+  const params = {
+    sort_on: 'score',
+    sort_order: 'desc',
+    limit: 50,
+    includes: 'MainImage,Shop'
+  };
+
+  if (category) {
+    params.category = category;
+  }
+
+  const response = await etsyApi.searchShopListings(integration.shop_name, params);
+  
+  return response.results.map(item => ({
+    id: item.listing_id,
+    title: item.title,
+    price: parseFloat(item.price.amount) / parseFloat(item.price.divisor),
+    currency: item.price.currency_code,
+    views: item.views || 0,
+    favorites: item.num_favorers || 0,
+    sales: item.quantity || 0,
+    tags: item.tags || [],
+    category: item.taxonomy_path?.[0] || 'unknown',
+    image_url: item.Images?.[0]?.url_fullxfull,
+    shop_name: item.Shop?.shop_name,
+    url: `https://www.etsy.com/listing/${item.listing_id}`,
+    score: calculateTrendScore(item)
+  }));
+}
+
+async function enhanceTrendsWithAI(trends, marketplace) {
+  const openaiApi = await getOpenAIClient();
+  
+  const prompt = `
+    Analyze these ${marketplace} product trends and provide insights:
+    ${JSON.stringify(trends.slice(0, 10), null, 2)}
+    
+    Provide analysis in JSON format with:
+    1. market_gap_analysis
+    2. recommended_price_range
+    3. optimal_tags
+    4. design_suggestions
+    5. competition_level
+  `;
+
+  const response = await openaiApi.chat.completions.create({
+    model: "gpt-4",
+    messages: [
+      { role: "system", content: "You are a e-commerce trend analysis expert." },
+      { role: "user", content: prompt }
+    ],
+    temperature: 0.7,
+    response_format: { type: "json_object" }
+  });
+
+  const analysis = JSON.parse(response.choices[0].message.content);
+  
+  return trends.map(trend => ({
+    ...trend,
+    ai_analysis: analysis,
+    ai_score: calculateAIScore(trend, analysis)
+  }));
+}
