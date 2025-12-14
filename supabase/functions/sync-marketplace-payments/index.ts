@@ -1,62 +1,67 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+/* ======================================================
+   CORS HEADERS
+====================================================== */
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 serve(async (req) => {
+  /* ================================
+     PREFLIGHT (ZORUNLU)
+  ================================= */
+  if (req.method === "OPTIONS") {
+    return new Response("ok", {
+      headers: corsHeaders,
+      status: 200,
+    });
+  }
+
   try {
-    /* ================================
-       SUPABASE CLIENT (SERVICE ROLE)
-    ================================= */
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    /* ================================
-       AKTİF ETSY ENTEGRASYONLARI
-    ================================= */
-    const { data: integrations, error: intErr } = await supabase
+    const { data: integrations, error } = await supabase
       .from("integrations")
       .select("*")
       .eq("provider", "etsy")
       .eq("is_active", true);
 
-    if (intErr) throw intErr;
+    if (error) throw error;
 
-    /* ================================
-       HER ETSY SHOP İÇİN
-    ================================= */
     for (const integration of integrations) {
-      const accessToken = await refreshEtsyToken(supabase, integration);
+      const token = await refreshEtsyToken(supabase, integration);
 
-      /* ================================
-         ETSY PAYMENTS
-      ================================= */
-      const paymentsRes = await fetch(
+      const res = await fetch(
         `https://api.etsy.com/v3/application/shops/${integration.shop_id}/payments`,
         {
           headers: {
-            Authorization: `Bearer ${accessToken}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
 
-      if (!paymentsRes.ok) continue;
+      if (!res.ok) continue;
 
-      const paymentsJson = await paymentsRes.json();
-      const payments = paymentsJson.results || [];
+      const json = await res.json();
+      const payments = json.results || [];
 
       for (const payment of payments) {
         if (!payment.order_id) continue;
 
-        /* ================================
-           ETSY ORDER DETAIL
-        ================================= */
         const orderRes = await fetch(
           `https://api.etsy.com/v3/application/shops/${integration.shop_id}/orders/${payment.order_id}`,
           {
             headers: {
-              Authorization: `Bearer ${accessToken}`
-            }
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
 
@@ -66,16 +71,10 @@ serve(async (req) => {
         const order = orderJson.results?.[0];
         if (!order) continue;
 
-        /* ================================
-           SKU (SKN)
-        ================================= */
-        const lineItem = order.line_items?.[0];
-        const skn = lineItem?.sku;
+        const item = order.line_items?.[0];
+        const skn = item?.sku;
         if (!skn) continue;
 
-        /* ================================
-           PRODUCT → USER
-        ================================= */
         const { data: product } = await supabase
           .from("products")
           .select("id, user_id")
@@ -84,25 +83,6 @@ serve(async (req) => {
 
         if (!product) continue;
 
-        /* ================================
-           ORDERS UPSERT
-        ================================= */
-        await supabase.from("orders").upsert({
-          user_id: product.user_id,
-          product_id: product.id,
-          etsy_order_id: payment.order_id,
-          order_number: order.order_id,
-          product_name: lineItem.title,
-          quantity: lineItem.quantity,
-          unit_price: payment.amount.value / 100,
-          total_price: payment.amount.value / 100,
-          status: "paid",
-          fulfillment_status: "unfulfilled"
-        });
-
-        /* ================================
-           PAYMENTS UPSERT
-        ================================= */
         await supabase.from("payments").upsert({
           provider: "etsy",
           user_id: product.user_id,
@@ -111,21 +91,27 @@ serve(async (req) => {
           amount: payment.amount.value / 100,
           currency: payment.amount.currency || "USD",
           status: payment.status,
-          payment_date: payment.create_date
+          payment_date: payment.create_date,
         });
       }
     }
 
     return new Response(
       JSON.stringify({ success: true }),
-      { status: 200 }
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
     );
-
   } catch (err) {
-    console.error("❌ Sync error:", err);
+    console.error("❌ Edge error:", err);
+
     return new Response(
       JSON.stringify({ error: "SYNC_FAILED" }),
-      { status: 500 }
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      }
     );
   }
 });
@@ -149,8 +135,8 @@ async function refreshEtsyToken(supabase: any, integration: any) {
       body: JSON.stringify({
         grant_type: "refresh_token",
         client_id: integration.api_key,
-        refresh_token: integration.refresh_token
-      })
+        refresh_token: integration.refresh_token,
+      }),
     }
   );
 
@@ -163,7 +149,7 @@ async function refreshEtsyToken(supabase: any, integration: any) {
     .update({
       access_token: data.access_token,
       refresh_token: data.refresh_token,
-      expires_at: new Date(Date.now() + data.expires_in * 1000)
+      expires_at: new Date(Date.now() + data.expires_in * 1000),
     })
     .eq("id", integration.id);
 
