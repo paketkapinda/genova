@@ -1,7 +1,6 @@
 /* =====================================================
-   PartnerShop – Products Module (Clean Version)
-   Role: Frontend Orchestrator Only
-   ===================================================== */
+   PartnerShop – Products Module (CLEAN & SAFE)
+===================================================== */
 
 import { supabase } from './supabaseClient.js';
 
@@ -25,7 +24,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 -------------------------------- */
 async function loadUserAndProfile() {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user) {
+    console.warn('User not logged in');
+    return;
+  }
 
   currentUser = user;
 
@@ -57,7 +59,8 @@ function bindUIEvents() {
    TOP SELLER ANALYSIS
 -------------------------------- */
 async function analyzeTopSellers() {
-  if (isLoading) return;
+  if (!currentProfile || isLoading) return;
+
   isLoading = true;
   lockUI(true);
 
@@ -75,7 +78,7 @@ async function analyzeTopSellers() {
 
     if (error) throw error;
 
-    renderTopSellerResults(data.trend_scores);
+    renderTopSellerResults(data?.trend_scores || []);
 
   } catch (err) {
     console.error(err);
@@ -98,30 +101,37 @@ function renderTopSellerResults(products = []) {
     return;
   }
 
-  container.innerHTML = products.map(product => `
+  container.innerHTML = products.map(p => `
     <div class="product-card">
-      <h4>${product.listing_title}</h4>
-      <p>Estimated monthly sales: ${product.monthly_sales_estimate}</p>
-      <p>Trend score: ${product.trend_score}%</p>
-      <button onclick='createProduct("${product.listing_id}")'>
+      <h4>${p.listing_title}</h4>
+      <p>Monthly sales: ${p.monthly_sales_estimate}</p>
+      <p>Trend score: ${p.trend_score}%</p>
+      <button data-id="${p.listing_id}" class="btn-create">
         Create Product
       </button>
     </div>
   `).join('');
+
+  container.querySelectorAll('.btn-create').forEach(btn => {
+    btn.addEventListener('click', () => {
+      createProduct(btn.dataset.id);
+    });
+  });
 }
 
 /* -----------------------------
-   CREATE PRODUCT (COMMAND ONLY)
+   CREATE PRODUCT
 -------------------------------- */
 async function createProduct(listingId) {
-  if (isLoading) return;
+  if (!currentProfile || isLoading) return;
+
   isLoading = true;
   lockUI(true);
 
   try {
     notify('Creating product...', 'info');
 
-    const { data, error } = await supabase.functions.invoke(
+    const { error } = await supabase.functions.invoke(
       'create-product-from-etsy',
       {
         body: {
@@ -154,53 +164,3 @@ function lockUI(state) {
 function notify(message, type = 'info') {
   console.log(`[${type.toUpperCase()}]`, message);
 }
-
-
-/* -----------------------------
-   EDGE FUNCTIONS 
--------------------------------- */
-
-await supabase.functions.invoke('generate-similar-designs', {
-  body: {
-    user_id: currentUser.id,
-    reference_image: product.image,
-    product_type: 't-shirt',
-    style: 'minimal illustration',
-    variations: 3
-  }
-});
-
-
-await fetch('/functions/v1/analyze-top-sellers', {
-  method: 'POST'
-})
-
-
-await fetch('/functions/v1/generate-design-variations', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    baseProduct: selectedProduct,
-    variations: 6
-  })
-})
-
-
-await fetch('/functions/v1/apply-mockups', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    design_id: selectedDesign.id,
-    mockup_type: 'tshirt_male_front'
-  })
-})
-
-
-await fetch('/functions/v1/publish-to-marketplace', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    product_id: selectedProduct.id,
-    user_id: currentUser.id
-  })
-})
