@@ -361,176 +361,37 @@ if (document.getElementById('orders-grid')) {
   initOrders();
 }
 
-class OrderSyncManager {
-  constructor() {
-    this.pollingInterval = 300000; // 5 minutes
-    this.webhookEnabled = true;
-  }
 
-  async syncOrdersFromAllMarketplaces() {
-    const { data: integrations } = await supabase
-      .from('integrations')
-      .select('*')
-      .eq('is_active', true)
-      .in('marketplace_type', ['etsy', 'amazon', 'shopify'])
-      .eq('user_id', userId);
 
-    const allOrders = [];
-    
-    for (const integration of integrations) {
-      const orders = await this.syncMarketplaceOrders(integration);
-      allOrders.push(...orders);
-    }
+async function confirmPodPayment(orderId, podProvider) {
+  await fetch('/functions/v1/process-pod-payment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      order_id: orderId,
+      pod_provider: podProvider
+    })
+  })
 
-    // Auto-process orders to POD
-    await this.autoProcessToPOD(allOrders);
+  showNotification('Order sent to POD successfully', 'success')
+}
 
-    return allOrders;
-  }
+function playAlertSound() {
+  const audio = new Audio('/assets/sounds/alert.mp3')
+  audio.play().catch(() => {})
+}
 
-  async syncMarketplaceOrders(integration) {
-    const lastSync = await this.getLastOrderSync(integration.id);
-    
-    switch (integration.marketplace_type) {
-      case 'etsy':
-        return this.syncEtsyOrders(integration, lastSync);
-      case 'amazon':
-        return this.syncAmazonOrders(integration, lastSync);
-      default:
-        return [];
-    }
-  }
+async function processPodPayment(orderId, podProviderId) {
+  const res = await fetch('/functions/pod-payment', {
+    method: 'POST',
+    body: JSON.stringify({ orderId, podProviderId })
+  })
 
-  async syncEtsyOrders(integration, since) {
-    const etsyApi = new EtsyAPI({
-      apiKey: integration.api_key,
-      accessToken: integration.access_token,
-      shopId: integration.shop_name
-    });
+  const data = await res.json()
 
-    const params = {
-      min_created: Math.floor(since.getTime() / 1000),
-      limit: 100,
-      includes: 'Transactions,Listings'
-    };
-
-    const receipts = await etsyApi.getShopReceipts(params);
-    
-    return receipts.results.map(receipt => this.transformEtsyReceipt(receipt, integration));
-  }
-
-  async sendToPOD(orderId, podProviderId = null) {
-    const { data: order } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        order_items (
-          *,
-          product:product_id (*)
-        )
-      `)
-      .eq('id', orderId)
-      .single();
-
-    if (!order) throw new Error('Order not found');
-
-    // Get POD provider
-    let podProvider;
-    if (podProviderId) {
-      const { data } = await supabase
-        .from('pod_providers')
-        .select('*')
-        .eq('id', podProviderId)
-        .single();
-      podProvider = data;
-    } else {
-      // Get default provider
-      const { data } = await supabase
-        .from('pod_providers')
-        .select('*')
-        .eq('default_provider', true)
-        .eq('is_active', true)
-        .single();
-      podProvider = data;
-    }
-
-    if (!podProvider) throw new Error('No POD provider configured');
-
-    // Send to POD provider
-    const podResponse = await this.sendToPODProvider(order, podProvider);
-
-    // Update order status
-    await supabase
-      .from('orders')
-      .update({
-        pod_status: 'submitted',
-        pod_provider_id: podProvider.id,
-        pod_reference: podResponse.reference_id,
-        pod_response: podResponse,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', orderId);
-
-    // Start tracking POD fulfillment
-    this.startPODTracking(orderId, podResponse.tracking_id);
-
-    return podResponse;
-  }
-
-  async sendToPODProvider(order, provider) {
-    switch (provider.provider_name) {
-      case 'printful':
-        return this.sendToPrintful(order, provider);
-      case 'printify':
-        return this.sendToPrintify(order, provider);
-      default:
-        throw new Error(`Unsupported POD provider: ${provider.provider_name}`);
-    }
-  }
-
-  async sendToPrintful(order, provider) {
-    const printfulApi = new PrintfulAPI(provider.api_key);
-    
-    const items = order.order_items.map(item => ({
-      external_id: item.id,
-      variant_id: provider.catalog_mapping[item.product.category],
-      quantity: item.quantity,
-      files: [
-        {
-          url: item.product.design_url,
-          type: 'default'
-        }
-      ],
-      options: {
-        size: item.variant_size,
-        color: item.variant_color
-      }
-    }));
-
-    const response = await printfulApi.createOrder({
-      external_id: order.marketplace_order_id,
-      recipient: {
-        name: order.shipping_name,
-        address1: order.shipping_address,
-        city: order.shipping_city,
-        state_code: order.shipping_state,
-        country_code: order.shipping_country,
-        zip: order.shipping_zip
-      },
-      items,
-      packing_slip: {
-        email: order.customer_email,
-        phone: order.customer_phone,
-        message: 'Thank you for your order!'
-      }
-    });
-
-    return {
-      success: true,
-      reference_id: response.id,
-      tracking_id: response.shipments?.[0]?.tracking_number,
-      cost: response.costs.total,
-      estimated_delivery: response.shipments?.[0]?.estimated_delivery_date
-    };
+  if (data.success) {
+    showNotification('Ödeme başarılı, sipariş POD’a gönderildi', 'success')
+  } else {
+    showNotification(data.error, 'error')
   }
 }
