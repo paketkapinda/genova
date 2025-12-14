@@ -3,54 +3,48 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS"
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SERVICE_ROLE_KEY")! // ✅ DOĞRU
     );
 
     /* =====================================================
-       AKTİF INTEGRATIONS
+       AKTİF ETSY INTEGRATIONS
     ===================================================== */
     const { data: integrations, error: intErr } = await supabase
       .from("integrations")
       .select("*")
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .eq("provider", "etsy");
 
     if (intErr) throw intErr;
 
     for (const integration of integrations) {
-      if (integration.provider !== "etsy") continue;
+      if (!integration.access_token || !integration.shop_id) continue;
 
-      const accessToken = integration.access_token;
-      const shopId = integration.shop_id;
-
-      if (!accessToken || !shopId) continue;
-
-      /* =====================================================
-         ETSY PAYMENTS
-      ===================================================== */
       const res = await fetch(
-        `https://api.etsy.com/v3/application/shops/${shopId}/payments`,
+        `https://api.etsy.com/v3/application/shops/${integration.shop_id}/payments`,
         {
           headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "x-api-key": integration.api_key
-          }
+            Authorization: `Bearer ${integration.access_token}`,
+            "x-api-key": integration.api_key,
+          },
         }
       );
 
       if (!res.ok) {
-        console.error("Etsy API error", await res.text());
+        console.error("Etsy API error:", await res.text());
         continue;
       }
 
@@ -61,7 +55,7 @@ serve(async (req) => {
         if (!p.order_id) continue;
 
         /* ===========================================
-           ORDER → USER EŞLEŞMESİ
+           ORDER → USER MATCH
         =========================================== */
         const { data: order } = await supabase
           .from("orders")
@@ -72,38 +66,45 @@ serve(async (req) => {
         if (!order) continue;
 
         /* ===========================================
-           PAYMENTS UPSERT
+           UPSERT PAYMENT
         =========================================== */
-        await supabase
-          .from("payments")
-          .upsert(
-            {
-              integration_id: integration.id,
-              external_payment_id: p.payment_id,
-              order_id: p.order_id,
-              user_id: order.user_id,
-              amount: p.amount?.amount || 0,
-              currency: p.amount?.currency_code || "USD",
-              status: p.status || "paid",
-              payment_date: p.create_date,
-              provider: "etsy"
-            },
-            {
-              onConflict: "integration_id,external_payment_id"
-            }
-          );
+        await supabase.from("payments").upsert(
+          {
+            integration_id: integration.id,
+            external_payment_id: p.payment_id,
+            order_id: p.order_id,
+            user_id: order.user_id,
+            amount: p.amount?.amount || 0,
+            currency: p.amount?.currency_code || "USD",
+            status: p.status || "paid",
+            payment_date: p.create_date,
+            provider: "etsy",
+          },
+          { onConflict: "integration_id,external_payment_id" }
+        );
       }
     }
 
     return new Response(
       JSON.stringify({ success: true }),
-      { headers: corsHeaders }
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
     );
   } catch (err) {
     console.error("SYNC ERROR", err);
     return new Response(
       JSON.stringify({ error: "sync_failed" }),
-      { status: 500, headers: corsHeaders }
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
     );
   }
 });
