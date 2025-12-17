@@ -33,7 +33,8 @@ async function loadUser() {
 -------------------------------- */
 function bindUI() {
   document.getElementById('analyze-top-sellers')
-    ?.addEventListener('click', analyzeTopSellers);
+  ?.addEventListener('click', analyzeTopSellers);
+
 
   document.getElementById('btn-new-product')
     ?.addEventListener('click', () => openModal('modal-product'));
